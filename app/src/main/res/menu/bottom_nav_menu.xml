@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navigation_home"
+        android:icon="@drawable/ic_home_black_24dp"
+        android:title="Trang chủ"/>
+
+    <!-- Placeholder for FAB (Add Device) -->
+    <item
+        android:id="@+id/placeholder_1"
+        android:title=""
+        android:enabled="false"/>
+
+    <!-- Placeholder for FAB (Chat) -->
+    <item
+        android:id="@+id/placeholder_2"
+        android:title=""
+        android:enabled="false"/>
+
+    <item
+        android:id="@+id/navigation_account"
+        android:icon="@drawable/ic_account_circle_24"
+        android:title="Tài khoản"/>
+</menu>

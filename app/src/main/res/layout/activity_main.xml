@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white"
+    android:fitsSystemWindows="true"
+    android:clipChildren="false">
+
+    <!-- BACKGROUND -->
+    <View
+        android:id="@+id/curvedShape"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/bg_skewed_shape"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <ImageButton
+        android:id="@+id/btnBack"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_arrow_back_24"
+        app:tint="@color/black"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:elevation="10dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <!-- LOGO -->
+            <ImageView
+                android:id="@+id/logo"
+                android:layout_width="320dp"
+                android:layout_height="140dp"
+                android:layout_marginTop="48dp"
+                android:layout_marginBottom="24dp"
+                android:src="@drawable/tieude_copy_removebg_preview" />
+
+            <!-- FORMS CONTAINER -->
+            <FrameLayout
+                android:id="@+id/formsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <!-- LOGIN -->
+                <include
+                    android:id="@+id/loginLayout"
+                    layout="@layout/layout_login" />
+
+                <!-- REGISTER -->
+                <include
+                    android:id="@+id/layoutRegister"
+                    layout="@layout/layout_register" />
+
+                <!-- FORGOT PASSWORD -->
+                <include
+                    android:id="@+id/layoutForgotpassword"
+                    layout="@layout/layout_forgot_password" />
+
+                <!-- OTP -->
+                <include
+                    android:id="@+id/layoutOtp"
+                    layout="@layout/layout_otp" />
+
+                <!-- RESET PASSWORD -->
+                <include
+                    android:id="@+id/layoutResetPassword"
+                    layout="@layout/layout_reset_password" />
+
+                <!-- VERIFICATION SENT -->
+                <include
+                    android:id="@+id/layoutVerificationSent"
+                    layout="@layout/layout_verification_sent" />
+
+                <!-- SIGNUP SUCCESS -->
+                <include
+                    android:id="@+id/layoutSignupSuccess"
+                    layout="@layout/layout_signup_success" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

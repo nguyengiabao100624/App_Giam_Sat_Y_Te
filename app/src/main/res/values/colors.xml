@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="app_gray">#4E4E4E</color>
+    <color name="bg_start">#E89170</color>
+    <color name="bg_end">#D5684A</color>
+
+    <!-- New Colors -->
+    <color name="app_orange">#FF9800</color>
+    <color name="orange_main">#FF5722</color>
+    <color name="purple_500">#9C27B0</color>
+
+    <!-- Status Colors -->
+    <color name="color_status_normal">#4CAF50</color> <!-- Green -->
+    <color name="color_status_warning">#FFC107</color> <!-- Amber -->
+    <color name="color_status_danger">#F44336</color>  <!-- Red -->
+</resources>

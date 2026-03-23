@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@android:color/white"/>
+    <corners
+        android:topLeftRadius="24dp"
+        android:topRightRadius="24dp"/>
+    <padding
+        android:left="0dp"
+        android:top="0dp"
+        android:right="0dp"
+        android:bottom="0dp" />
+    <!-- Adding a subtle shadow effect can be done via elevation on the view,
+         but here we set the shape. The shadow is best handled by the view's elevation property. -->
+</shape>

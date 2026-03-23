@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@id/navigation_home">
+
+    <fragment
+        android:id="@+id/navigation_home"
+        android:name="com.example.loginanimatedapp.ui.home.HomeFragment"
+        android:label="Trang chủ"
+        tools:layout="@layout/fragment_home">
+        <action
+            android:id="@+id/action_home_to_detail"
+            app:destination="@id/navigation_metric_detail" />
+        <action
+            android:id="@+id/action_home_to_dashboard"
+            app:destination="@id/navigation_dashboard" />
+        <action
+            android:id="@+id/action_home_to_full_map"
+            app:destination="@id/navigation_dashboard" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_dashboard"
+        android:name="com.example.loginanimatedapp.ui.dashboard.DashboardFragment"
+        android:label="Bản đồ y tế"
+        tools:layout="@layout/fragment_dashboard" />
+
+    <fragment
+        android:id="@+id/navigation_chat"
+        android:name="com.example.loginanimatedapp.ui.chat.ChatFragment"
+        android:label="Trợ lý ảo"
+        tools:layout="@layout/fragment_chat" />
+
+    <fragment
+        android:id="@+id/navigation_notifications"
+        android:name="com.example.loginanimatedapp.ui.notifications.NotificationsFragment"
+        android:label="Thông báo"
+        tools:layout="@layout/fragment_notifications">
+        <action
+            android:id="@+id/action_notifications_to_detail"
+            app:destination="@id/navigation_notification_detail" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_account"
+        android:name="com.example.loginanimatedapp.ui.account.AccountFragment"
+        android:label="Tài khoản"
+        tools:layout="@layout/fragment_account">
+        <action
+            android:id="@+id/action_account_to_otp"
+            app:destination="@id/navigation_otp" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_otp"
+        android:name="com.example.loginanimatedapp.ui.account.OtpFragment"
+        android:label="Xác thực OTP"
+        tools:layout="@layout/layout_otp">
+        <argument
+            android:name="phoneNumber"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_metric_detail"
+        android:name="com.example.loginanimatedapp.ui.dashboard.MetricDetailFragment"
+        android:label="{title}"
+        tools:layout="@layout/fragment_detail_metric">
+        <argument
+            android:name="metric_type"
+            app:argType="string" />
+        <argument
+            android:name="title"
+            app:argType="string"
+            android:defaultValue="Chi tiết" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/navigation_notification_detail"
+        android:name="com.example.loginanimatedapp.ui.notifications.NotificationDetailFragment"
+        android:label="Chi tiết thông báo"
+        tools:layout="@layout/fragment_notification_detail">
+        <argument
+            android:name="notification"
+            app:argType="com.example.loginanimatedapp.model.Notification" />
+    </fragment>
+
+</navigation>
