@@ -1,18 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     android:padding="8dp">
 
-    <TextView
-        android:id="@+id/tv_message"
+    <!-- Khung chứa Icon và Vòng xoay (Đảm bảo căn giữa tuyệt đối) -->
+    <RelativeLayout
+        android:id="@+id/layout_bot_icon"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_marginEnd="8dp">
+
+        <!-- Vòng xoay suy nghĩ: Kích thước 56dp, căn giữa trong RelativeLayout -->
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/pb_bot_thinking"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:indeterminate="true"
+            app:indicatorColor="@color/orange_main"
+            app:indicatorSize="56dp"
+            app:trackThickness="4dp"
+            app:trackCornerRadius="10dp"
+            android:visibility="gone" />
+
+        <!-- Icon Robot Tròn: Kích thước 44dp, căn giữa trong RelativeLayout -->
+        <ImageView
+            android:id="@+id/iv_bot_avatar"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_centerInParent="true"
+            android:src="@drawable/ic_bot_avatar_round"
+            app:tint="@null" />
+    </RelativeLayout>
+
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="start"
-        android:background="@drawable/bg_chat_received"
-        android:padding="12dp"
-        android:text="This is a received message"
-        android:textColor="@android:color/black" />
+        android:layout_gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_chat_received"
+            android:padding="12dp"
+            android:text="This is a received message"
+            android:textColor="@android:color/black" />
+
+        <ImageView
+            android:id="@+id/iv_chat_image"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_marginTop="4dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+    </LinearLayout>
 
 </LinearLayout>

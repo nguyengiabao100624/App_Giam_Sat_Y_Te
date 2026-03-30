@@ -120,24 +120,63 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
 
         // NÂNG CẤP: Hiển thị trạng thái với màu sắc và icon đồng bộ chuẩn y tế
         String trangThaiVn = "ĐANG KẾT NỐI...";
+        String statusDetail = "Vui lòng chờ trong giây lát...";
+        
         if (isSOS) {
             trangThaiVn = "SOS KHẨN CẤP!";
+            statusDetail = "Người dùng vừa nhấn nút SOS khẩn cấp, cần hỗ trợ ngay!";
             binding.tvHomeOverallStatus.setTextColor(Color.RED);
             binding.ivStatusIcon.setImageResource(R.drawable.ic_error_circle_red);
         } else if (isFall) {
             trangThaiVn = "PHÁT HIỆN TÉ NGÃ!";
+            statusDetail = "Cảm biến phát hiện tác động mạnh nghi là té ngã!";
             binding.tvHomeOverallStatus.setTextColor(Color.RED);
             binding.ivStatusIcon.setImageResource(R.drawable.ic_error_circle_red);
         } else if (isHealthAlert || rawTrangThai.contains("CANH BAO")) {
             trangThaiVn = "CẢNH BÁO SỨC KHỎE!";
+            
+            // Xây dựng chi tiết cảnh báo dựa trên các chỉ số thực tế
+            StringBuilder sb = new StringBuilder("Phát hiện bất thường: ");
+            boolean added = false;
+            try {
+                if (hr != null) {
+                    float v = Float.parseFloat(String.valueOf(hr));
+                    if (v > 100) { sb.append("Nhịp tim cao (").append((int)v).append(")"); added = true; }
+                    else if (v < 60 && v > 0) { sb.append("Nhịp tim thấp (").append((int)v).append(")"); added = true; }
+                }
+                if (spo2 != null) {
+                    float v = Float.parseFloat(String.valueOf(spo2));
+                    if (v < 94 && v > 0) {
+                        if (added) sb.append(", ");
+                        sb.append("SpO2 thấp (").append((int)v).append("%)"); added = true;
+                    }
+                }
+                if (tempObj != null) {
+                    float v = Float.parseFloat(String.valueOf(tempObj));
+                    if (v > 37.8f) {
+                        if (added) sb.append(", ");
+                        sb.append("Thân nhiệt cao (").append(String.format("%.1f", v)).append("°C)"); added = true;
+                    } else if (v < 35.0f && v > 0) {
+                        if (added) sb.append(", ");
+                        sb.append("Thân nhiệt thấp (").append(String.format("%.1f", v)).append("°C)"); added = true;
+                    }
+                }
+            } catch (Exception ignored) {}
+            
+            if (!added) sb.append("Chỉ số vượt ngưỡng an toàn");
+            statusDetail = sb.toString();
+            
             binding.tvHomeOverallStatus.setTextColor(Color.parseColor("#FB8C00")); // Deep Orange
             binding.ivStatusIcon.setImageResource(R.drawable.ic_info_circle_blue);
         } else if (rawTrangThai.contains("BINH THUONG")) {
             trangThaiVn = "BÌNH THƯỜNG";
+            statusDetail = "Mọi chỉ số sức khỏe hiện đang ở mức ổn định";
             binding.tvHomeOverallStatus.setTextColor(Color.parseColor("#4CAF50")); // Green
             binding.ivStatusIcon.setImageResource(R.drawable.ic_check_circle_green);
         }
+        
         binding.tvHomeOverallStatus.setText(trangThaiVn);
+        binding.tvStatusDetail.setText(statusDetail);
 
         String trangThaiDoVn = "--";
         if ("Cho do".equalsIgnoreCase(rawTrangThaiDo)) trangThaiDoVn = "Chờ đo";

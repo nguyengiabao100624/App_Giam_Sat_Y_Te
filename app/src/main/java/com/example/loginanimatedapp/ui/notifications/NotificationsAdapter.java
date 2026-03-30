@@ -26,6 +26,7 @@ public class NotificationsAdapter extends RecyclerView.Adapter<NotificationsAdap
 
     public interface OnNotificationClickListener {
         void onNotificationClick(Notification notification, int position);
+        void onNotificationLongClick(Notification notification, int position);
     }
 
     public NotificationsAdapter(List<Notification> notifications, OnNotificationClickListener listener) {
@@ -43,13 +44,20 @@ public class NotificationsAdapter extends RecyclerView.Adapter<NotificationsAdap
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Notification notification = notifications.get(position);
-        holder.icon.setImageResource(notification.getIconResId());
+        
+        // Sử dụng iconResId từ model (đã được NotificationService gán icon tùy biến)
+        int iconRes = notification.getIconResId();
+        if (iconRes == 0) iconRes = R.drawable.ic_health_notification;
+        holder.icon.setImageResource(iconRes);
+        
         holder.title.setText(notification.getTitle());
         holder.message.setText(notification.getMessage());
-        holder.timestamp.setText(new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(notification.getTimestamp())));
+        
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm - dd/MM", Locale.getDefault());
+        holder.timestamp.setText(sdf.format(new Date(notification.getTimestamp())));
 
         if (!notification.isRead()) {
-            holder.cardBackground.setBackgroundColor(Color.parseColor("#E3F2FD")); // Light blue
+            holder.cardBackground.setBackgroundColor(Color.parseColor("#FFF3E0")); // Light orange
             holder.unreadDot.setVisibility(View.VISIBLE);
         } else {
             holder.cardBackground.setBackgroundColor(Color.WHITE);
@@ -60,6 +68,14 @@ public class NotificationsAdapter extends RecyclerView.Adapter<NotificationsAdap
             if (listener != null) {
                 listener.onNotificationClick(notification, position);
             }
+        });
+
+        holder.itemView.setOnLongClickListener(v -> {
+            if (listener != null) {
+                listener.onNotificationLongClick(notification, position);
+                return true;
+            }
+            return false;
         });
     }
 

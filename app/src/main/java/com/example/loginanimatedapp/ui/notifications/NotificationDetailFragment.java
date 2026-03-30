@@ -3,6 +3,7 @@ package com.example.loginanimatedapp.ui.notifications;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -64,9 +65,15 @@ public class NotificationDetailFragment extends Fragment {
                 // Fallback icon nếu lỗi
             }
             
-            // Hiển thị giá trị ghi nhận
+            // HIỂN THỊ GIÁ TRỊ GHI NHẬN
             String val = notification.getMetricValue();
-            binding.tvDetailValue.setText((val != null && !val.isEmpty() && !"--".equals(val)) ? val : "N/A");
+            Log.d("NotifDetail", "MetricValue: " + val); // Debug xem giá trị là gì
+            
+            if (val == null || val.trim().isEmpty() || val.equals("--") || val.equalsIgnoreCase("null")) {
+                binding.tvDetailValue.setText("N/A");
+            } else {
+                binding.tvDetailValue.setText(val);
+            }
             
             try {
                 SimpleDateFormat sdf = new SimpleDateFormat("HH:mm - dd/MM/yyyy", Locale.getDefault());
@@ -81,13 +88,10 @@ public class NotificationDetailFragment extends Fragment {
 
             updateAdvice(title, message);
         } else {
-            // Nếu không có dữ liệu, thông báo lỗi nhẹ nhàng thay vì văng app
             binding.tvDetailTitle.setText("Không tìm thấy dữ liệu");
             binding.tvDetailMessage.setText("Thông báo này có thể đã bị xóa hoặc không hợp lệ.");
         }
 
-        // Fix nút ĐÓNG không hoạt động (btn_action_primary trong layout đang làm nhiệm vụ này)
-        // Nếu không phải SOS/Té ngã thì nút này sẽ quay lại màn hình trước
         if (notification == null || (!notification.getTitle().contains("SOS") && !notification.getTitle().contains("TÉ NGÃ"))) {
             binding.btnActionPrimary.setText("ĐÓNG");
             binding.btnActionPrimary.setOnClickListener(v -> Navigation.findNavController(v).navigateUp());
@@ -114,10 +118,10 @@ public class NotificationDetailFragment extends Fragment {
             suggestion.append("• Cho người thân uống nước ấm hoặc sữa ấm.\n")
                       .append("• Đắp chăn giữ ấm hoặc nới lỏng quần áo tùy tình trạng.\n")
                       .append("• Theo dõi nhiệt độ liên tục mỗi 15 phút.");
-        } else if (message.contains("Oxy") || message.contains("Nhịp tim") || message.contains("ô nhiễm")) {
+        } else if (message.contains("Oxy") || message.contains("Nhịp tim") || message.contains("SpO2")) {
             suggestion.append("• Nhắc người thân hít thở sâu và đều.\n")
                       .append("• Ngồi tư thế thẳng lưng hoặc nằm nghiêng.\n")
-                      .append("• Kiểm tra lại dây đeo thiết bị hoặc bật máy lọc khí.");
+                      .append("• Kiểm tra lại dây đeo thiết bị.");
         }
 
         binding.tvDetailSuggestion.setText(suggestion.toString().isEmpty() ? "Vui lòng theo dõi tình trạng sức khỏe thường xuyên." : suggestion.toString());

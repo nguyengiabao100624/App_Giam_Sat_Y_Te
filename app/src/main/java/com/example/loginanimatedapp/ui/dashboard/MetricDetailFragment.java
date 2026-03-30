@@ -1,8 +1,9 @@
 package com.example.loginanimatedapp.ui.dashboard;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,7 @@ import com.example.loginanimatedapp.databinding.FragmentDetailMetricBinding;
 import com.example.loginanimatedapp.utils.AppConstants;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.charts.PieChart;
+import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
@@ -52,6 +54,7 @@ public class MetricDetailFragment extends Fragment {
 
     private DatabaseReference historyRef;
     private final List<Entry> historyEntries = new ArrayList<>();
+    private final List<Entry> realtimeWaveformEntries = new ArrayList<>();
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -78,25 +81,25 @@ public class MetricDetailFragment extends Fragment {
         setupWaveformChart(binding.chartRealtimeWaveform);
         
         loadHistoryData();
+        
+        List<Entry> cachedEntries = dashboardViewModel.getHistoryCache(metricType + "_wave");
+        if (!cachedEntries.isEmpty()) {
+            realtimeWaveformEntries.addAll(cachedEntries);
+            graphXIndex = (int) cachedEntries.get(cachedEntries.size() - 1).getX() + 1;
+            updateWaveformUI();
+        }
+
+        Map<String, Object> currentData = dashboardViewModel.getDeviceData().getValue();
+        if (currentData != null) {
+            updateRealtimeData(currentData);
+        }
+
         dashboardViewModel.getDeviceData().observe(getViewLifecycleOwner(), this::updateRealtimeData);
     }
 
     private void setupUI() {
-        String desc = "";
         String unit = getUnit();
-
-        if ("heart_rate".equals(metricType)) {
-            desc = "Nhịp tim nghỉ ngơi trung bình của bạn là số nhịp tim mỗi phút khi bạn không hoạt động.";
-        } else if ("spo2".equals(metricType)) {
-            desc = "Độ bão hòa oxy trong máu (SpO2) đo tỷ lệ phần trăm oxy trong máu.";
-        } else if ("temperature".equals(metricType)) {
-            desc = "Thân nhiệt là thước đo khả năng tạo ra và loại bỏ nhiệt của cơ thể.";
-        } else if ("dust".equals(metricType)) {
-            desc = "Chất lượng không khí (PM2.5) đo lường nồng độ bụi mịn.";
-        }
-
         binding.tvMetricTitle.setText(displayTitle);
-        binding.tvAboutDesc.setText(desc);
         
         if (getActivity() instanceof AppCompatActivity) {
             if (((AppCompatActivity) getActivity()).getSupportActionBar() != null) {
@@ -107,10 +110,14 @@ public class MetricDetailFragment extends Fragment {
         setupHistoryChart(binding.chartHistory);
         setupDistributionChart(binding.chartDistribution);
         
-        // Reset thống kê về trạng thái ban đầu
         binding.tvStatHighest.setText("-- " + unit);
         binding.tvStatLowest.setText("-- " + unit);
         binding.tvStatAverage.setText("-- " + unit);
+        
+        binding.tvCurrentValue.setText("Chưa đo");
+        binding.tvStatCurrent.setText("Chưa đo");
+        binding.tvMetricStatusDetail.setText("Hệ thống sẵn sàng");
+        binding.tvLastUpdated.setText("Cập nhật lúc: --");
     }
 
     private String getUnit() {
@@ -122,150 +129,191 @@ public class MetricDetailFragment extends Fragment {
     }
 
     private String[] getFirebaseNodes() {
-        if ("heart_rate".equals(metricType)) return new String[]{"BPM", "heart_rate", "nhip_tim"};
-        if ("spo2".equals(metricType)) return new String[]{"SpO2", "oxy", "spo2"};
-        if ("temperature".equals(metricType)) return new String[]{"TempObj", "temperature", "than_nhiet"};
-        if ("dust".equals(metricType)) return new String[]{"Dust", "dust", "bui_min"};
+        if ("heart_rate".equals(metricType)) return new String[]{"BPM"};
+        if ("spo2".equals(metricType)) return new String[]{"SpO2"};
+        if ("temperature".equals(metricType)) return new String[]{"TempObj"};
+        if ("dust".equals(metricType)) return new String[]{"Dust"};
         return new String[]{};
     }
 
     private void loadHistoryData() {
         String[] possibleNodes = getFirebaseNodes();
-        if (possibleNodes.length == 0) return;
+        SharedPreferences prefs = requireContext().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
+        String deviceId = prefs.getString("connected_device_id", "");
 
         FirebaseDatabase db = FirebaseDatabase.getInstance(AppConstants.DATABASE_URL);
-        historyRef = db.getReference().child("History");
+        historyRef = deviceId.isEmpty() ? db.getReference("Histories") : db.getReference("Histories").child(deviceId);
         
-        // Lắng nghe dữ liệu lịch sử (50 bản ghi mới nhất)
-        historyRef.limitToLast(50).addValueEventListener(new ValueEventListener() {
+        historyRef.limitToLast(100).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (binding == null) return;
                 
                 historyEntries.clear();
-                int index = 0;
-                int normalCount = 0;
-                int warningCount = 0;
-                
-                highestValue = -1f;
-                lowestValue = -1f;
-                totalSum = 0f;
-                validDataCount = 0;
+                validDataCount = 0; totalSum = 0;
+                highestValue = -1f; lowestValue = -1f;
+                int normalCount = 0; int warningCount = 0; int criticalCount = 0;
 
-                for (DataSnapshot data : snapshot.getChildren()) {
-                    float val = -1f;
-                    // Quét qua các key có thể có để lấy dữ liệu
-                    for (String node : possibleNodes) {
-                        Object valObj = data.child(node).getValue();
-                        if (valObj != null) {
-                            try {
-                                val = Float.parseFloat(String.valueOf(valObj));
-                                break; 
-                            } catch (Exception e) {
-                                Log.e("History", "Parse error for " + node);
-                            }
+                int index = 0;
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    // LỌC DỮ LIỆU: Chỉ lấy khi thiết bị báo "Do lien tuc" cho Nhịp tim và SpO2
+                    if ("heart_rate".equals(metricType) || "spo2".equals(metricType)) {
+                        Object statusObj = child.child("TrangThaiDo").getValue();
+                        String status = String.valueOf(statusObj);
+                        if (!"Do lien tuc".equalsIgnoreCase(status)) {
+                            continue; // Bỏ qua nếu đang chờ đo hoặc đang trong tiến trình đo chưa xong
                         }
                     }
 
-                    if (val > 0) {
+                    Float val = findValueRecursive(child, possibleNodes, 0);
+                    if (val != null && val >= 0) {
                         historyEntries.add(new Entry(index++, val));
+                        updateStats(val);
                         
-                        if (highestValue == -1 || val > highestValue) highestValue = val;
-                        if (lowestValue == -1 || val < lowestValue) lowestValue = val;
-                        totalSum += val;
-                        validDataCount++;
-
-                        if (isWarning(val)) warningCount++;
-                        else normalCount++;
+                        int status = getStatusLevel(val);
+                        if (status == 0) normalCount++;
+                        else if (status == 1) warningCount++;
+                        else criticalCount++;
                     }
                 }
-
                 updateHistoryChart();
-                updateDistributionChartData(normalCount, warningCount);
+                updateDistributionChartData(normalCount, warningCount, criticalCount);
                 updateStatisticsUI();
             }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e("Firebase", "History error: " + error.getMessage());
-            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
-    private boolean isWarning(float val) {
-        if ("heart_rate".equals(metricType)) return val < 60 || val > 100;
-        if ("spo2".equals(metricType)) return val < 94;
-        if ("temperature".equals(metricType)) return val > 37.5f || val < 36.0f;
-        if ("dust".equals(metricType)) return val > 50;
-        return false;
+    private int getStatusLevel(float val) {
+        if ("heart_rate".equals(metricType)) {
+            if (val < 60 || val > 100) return 2;
+            return 0;
+        }
+        if ("spo2".equals(metricType)) {
+            if (val < 94) return 2;
+            return 0;
+        }
+        if ("temperature".equals(metricType)) {
+            if (val > 37.0f || (val < 30.0f && val > 0)) return 2; // Critical (Đỏ)
+            if ((val >= 30.0f && val < 31.0f) || (val > 35.0f && val <= 37.0f)) return 1; // Warning (Vàng)
+            return 0; // Normal (Xanh)
+        }
+        if ("dust".equals(metricType)) {
+            if (val > 50) return 1;
+            return 0;
+        }
+        return 0;
+    }
+
+    private Float findValueRecursive(DataSnapshot ds, String[] nodes, int depth) {
+        if (depth > 2) return null;
+        for (String node : nodes) {
+            DataSnapshot n = ds.child(node);
+            if (n.exists() && n.getValue() != null) {
+                try { return Float.parseFloat(String.valueOf(n.getValue())); } catch (Exception e) {}
+            }
+        }
+        for (DataSnapshot c : ds.getChildren()) {
+            Float f = findValueRecursive(c, nodes, depth + 1);
+            if (f != null) return f;
+        }
+        return null;
+    }
+
+    private void updateStats(float val) {
+        if (highestValue == -1 || val > highestValue) highestValue = val;
+        if (lowestValue == -1 || val < lowestValue) lowestValue = val;
+        totalSum += val;
+        validDataCount++;
     }
 
     private void updateStatisticsUI() {
         if (validDataCount == 0 || binding == null) return;
         String unit = getUnit();
-        boolean isTemp = "temperature".equals(metricType);
-        String format = isTemp ? "%.1f" : "%.0f";
-        
+        String format = "temperature".equals(metricType) ? "%.1f" : "%.0f";
         binding.tvStatHighest.setText(String.format(format, highestValue) + " " + unit);
         binding.tvStatLowest.setText(String.format(format, lowestValue) + " " + unit);
         binding.tvStatAverage.setText(String.format(format, totalSum / validDataCount) + " " + unit);
     }
 
     private void setupWaveformChart(LineChart chart) {
-        chart.setDrawGridBackground(false);
+        chart.setBackgroundColor(Color.WHITE);
         chart.getDescription().setEnabled(false);
         chart.setTouchEnabled(false);
         chart.getLegend().setEnabled(false);
-        chart.setViewPortOffsets(0, 0, 0, 0);
-        chart.getXAxis().setEnabled(false);
-        chart.getAxisRight().setEnabled(false);
-        chart.getAxisLeft().setEnabled(false);
+        chart.setDrawGridBackground(false);
+        chart.setDrawBorders(false);
         
-        LineDataSet set = new LineDataSet(new ArrayList<>(), "");
+        XAxis xAxis = chart.getXAxis();
+        xAxis.setEnabled(false);
+        
+        YAxis rightAxis = chart.getAxisRight();
+        rightAxis.setEnabled(false);
+        
+        YAxis leftAxis = chart.getAxisLeft();
+        leftAxis.setDrawGridLines(true);
+        leftAxis.setGridColor(Color.parseColor("#F0F0F0"));
+        leftAxis.setTextColor(Color.GRAY);
+        leftAxis.setTextSize(9f);
+        leftAxis.setDrawAxisLine(false);
+        leftAxis.setLabelCount(5, true);
+
+        if ("temperature".equals(metricType)) {
+            leftAxis.setAxisMinimum(25f);
+            leftAxis.setAxisMaximum(42f);
+        } else if ("spo2".equals(metricType)) {
+            leftAxis.setAxisMinimum(88f);
+            leftAxis.setAxisMaximum(101f);
+        } else if ("heart_rate".equals(metricType)) {
+            leftAxis.setAxisMinimum(50f);
+            leftAxis.setAxisMaximum(130f);
+        } else {
+            leftAxis.setAxisMinimum(0f);
+        }
+
+        LineDataSet set = createWaveformDataSet();
+        chart.setData(new LineData(set));
+    }
+
+    private LineDataSet createWaveformDataSet() {
+        LineDataSet set = new LineDataSet(new ArrayList<>(realtimeWaveformEntries), "");
         set.setMode(LineDataSet.Mode.CUBIC_BEZIER);
         set.setDrawCircles(false);
-        set.setLineWidth(3f);
-        set.setColor(Color.parseColor("#4CAF50"));
+        set.setLineWidth(2.5f);
         set.setDrawValues(false);
-        chart.setData(new LineData(set));
+        set.setDrawFilled(true);
+        set.setFillAlpha(35);
+
+        int color;
+        if ("heart_rate".equals(metricType)) color = Color.parseColor("#FF5252");
+        else if ("spo2".equals(metricType)) color = Color.parseColor("#2196F3");
+        else if ("temperature".equals(metricType)) color = Color.parseColor("#FF9800");
+        else color = Color.parseColor("#607D8B");
+        
+        set.setColor(color);
+        set.setFillColor(color);
+        return set;
     }
 
     private void setupHistoryChart(LineChart chart) {
         chart.getDescription().setEnabled(false);
-        chart.setDrawGridBackground(false);
         chart.getLegend().setEnabled(false);
         chart.setNoDataText("Đang tải dữ liệu lịch sử...");
-        chart.setNoDataTextColor(Color.GRAY);
-        
         XAxis xAxis = chart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setDrawGridLines(false);
-        xAxis.setGranularity(1f);
-        
         chart.getAxisRight().setEnabled(false);
-        YAxis leftAxis = chart.getAxisLeft();
-        leftAxis.setDrawGridLines(true);
-        leftAxis.setGridColor(Color.LTGRAY);
     }
 
     private void updateHistoryChart() {
-        if (historyEntries.isEmpty() || binding == null) return;
-        
+        if (binding == null || historyEntries.isEmpty()) return;
         LineDataSet dataSet = new LineDataSet(historyEntries, displayTitle);
-        dataSet.setColor(Color.parseColor("#2196F3"));
-        dataSet.setCircleColor(Color.parseColor("#1976D2"));
-        dataSet.setLineWidth(2.5f);
-        dataSet.setCircleRadius(3.5f);
-        dataSet.setDrawCircleHole(true);
-        dataSet.setCircleHoleRadius(1.5f);
-        dataSet.setValueTextSize(0f); // Tắt text trên điểm để đỡ rối
+        dataSet.setColor(Color.parseColor("#607D8B"));
+        dataSet.setLineWidth(2f);
+        dataSet.setCircleRadius(3f);
         dataSet.setDrawFilled(true);
-        dataSet.setFillColor(Color.parseColor("#BBDEFB"));
-        dataSet.setFillAlpha(100);
-        
-        LineData lineData = new LineData(dataSet);
-        binding.chartHistory.setData(lineData);
-        binding.chartHistory.animateX(1000);
+        dataSet.setFillColor(Color.parseColor("#CFD8DC"));
+        binding.chartHistory.setData(new LineData(dataSet));
         binding.chartHistory.invalidate();
     }
 
@@ -275,31 +323,44 @@ public class MetricDetailFragment extends Fragment {
         chart.setDrawHoleEnabled(true);
         chart.setHoleColor(Color.WHITE);
         chart.setTransparentCircleRadius(61f);
+        chart.setHoleRadius(58f);
+        chart.setDrawCenterText(true);
         chart.setCenterText("Tình trạng");
-        chart.setCenterTextSize(15f);
-        chart.setNoDataText("Đang phân tích...");
+        chart.setCenterTextSize(14f);
+        
+        Legend l = chart.getLegend();
+        l.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
+        l.setHorizontalAlignment(Legend.LegendHorizontalAlignment.CENTER);
+        l.setOrientation(Legend.LegendOrientation.HORIZONTAL);
+        l.setDrawInside(false);
     }
 
-    private void updateDistributionChartData(int normal, int warning) {
-        if (binding == null) return;
+    private void updateDistributionChartData(int normal, int warning, int critical) {
+        if (binding == null || (normal == 0 && warning == 0 && critical == 0)) return;
         ArrayList<PieEntry> entries = new ArrayList<>();
-        if (normal > 0) entries.add(new PieEntry(normal, "Bình thường"));
-        if (warning > 0) entries.add(new PieEntry(warning, "Cảnh báo"));
-
-        if (entries.isEmpty()) return;
-
-        PieDataSet dataSet = new PieDataSet(entries, "");
-        dataSet.setSliceSpace(4f);
-        dataSet.setSelectionShift(7f);
-
         ArrayList<Integer> colors = new ArrayList<>();
-        colors.add(Color.parseColor("#4CAF50")); // Green
-        colors.add(Color.parseColor("#F44336")); // Red
+        
+        if (normal > 0) {
+            entries.add(new PieEntry(normal, "Bình thường"));
+            colors.add(Color.parseColor("#66BB6A"));
+        }
+        if (warning > 0) {
+            entries.add(new PieEntry(warning, "Cảnh báo"));
+            colors.add(Color.parseColor("#FFD600"));
+        }
+        if (critical > 0) {
+            entries.add(new PieEntry(critical, "Nguy hiểm"));
+            colors.add(Color.parseColor("#EF5350"));
+        }
+        
+        PieDataSet dataSet = new PieDataSet(entries, "");
         dataSet.setColors(colors);
-
+        dataSet.setSliceSpace(3f);
+        dataSet.setSelectionShift(5f);
+        
         PieData data = new PieData(dataSet);
         data.setValueFormatter(new PercentFormatter(binding.chartDistribution));
-        data.setValueTextSize(12f);
+        data.setValueTextSize(11f);
         data.setValueTextColor(Color.WHITE);
         
         binding.chartDistribution.setData(data);
@@ -309,49 +370,95 @@ public class MetricDetailFragment extends Fragment {
     private void updateRealtimeData(Map<String, Object> data) {
         if (data == null || binding == null) return;
         
-        String[] possibleNodes = getFirebaseNodes();
+        String unit = getUnit();
+        boolean isMeasurementBased = "heart_rate".equals(metricType) || "spo2".equals(metricType);
+        
+        if (isMeasurementBased) {
+            Object lastTime = data.get("LastMeasureTime");
+            String timeStr = String.valueOf(lastTime);
+            if (lastTime == null || timeStr.equalsIgnoreCase("Chua do") || timeStr.trim().isEmpty() || timeStr.equals("null")) {
+                binding.tvCurrentValue.setText("Chưa đo");
+                binding.tvStatCurrent.setText("Chưa đo");
+                binding.tvMetricStatusDetail.setText("Chưa có dữ liệu đo mới nhất");
+                binding.tvLastUpdated.setText("Cập nhật lúc: Chưa đo");
+                return;
+            }
+        }
+
+        String[] nodes = getFirebaseNodes();
         float value = -1f;
-        for (String node : possibleNodes) {
-            Object rawVal = data.get(node);
-            if (rawVal != null) {
-                try {
-                    value = Float.parseFloat(String.valueOf(rawVal));
-                    break;
-                } catch (Exception e) {}
+        for (String node : nodes) {
+            Object v = data.get(node);
+            if (v != null && !String.valueOf(v).equals("null")) {
+                try { value = Float.parseFloat(String.valueOf(v)); break; } catch (Exception e) {}
             }
         }
 
         if (value >= 0) {
             try {
-                String unit = getUnit();
-                boolean isTemp = "temperature".equals(metricType);
-                String valDisplay = isTemp ? String.format("%.1f", value) : String.valueOf((int)value);
-                
+                String valDisplay = ("temperature".equals(metricType)) ? String.format("%.1f", value) : String.valueOf((int)value);
                 binding.tvCurrentValue.setText(valDisplay + " " + unit);
                 binding.tvStatCurrent.setText(valDisplay + " " + unit);
 
-                Object measureTime = ("dust".equals(metricType) || isTemp) ? data.get("ThoiGian") : data.get("LastMeasureTime");
-                binding.tvLastUpdated.setText("Cập nhật lúc: " + (measureTime != null ? String.valueOf(measureTime) : "--"));
+                updateDetailStatusMessage(value);
+
+                Object timeObj = ("dust".equals(metricType) || "temperature".equals(metricType)) ? data.get("ThoiGian") : data.get("LastMeasureTime");
+                String currentTime = String.valueOf(timeObj);
+                binding.tvLastUpdated.setText("Cập nhật lúc: " + currentTime);
 
                 if (value > 0) {
-                    LineData lineData = binding.chartRealtimeWaveform.getData();
-                    if (lineData != null) {
-                        LineDataSet set = (LineDataSet) lineData.getDataSetByIndex(0);
-                        lineData.addEntry(new Entry(graphXIndex++, value), 0);
-                        if (set.getEntryCount() > 30) set.removeEntry(0);
-                        lineData.notifyDataChanged();
-                        binding.chartRealtimeWaveform.notifyDataSetChanged();
-                        binding.chartRealtimeWaveform.setVisibleXRangeMaximum(30);
-                        binding.chartRealtimeWaveform.moveViewToX(graphXIndex);
-                    }
+                    realtimeWaveformEntries.add(new Entry(graphXIndex++, value));
+                    if (realtimeWaveformEntries.size() > 30) realtimeWaveformEntries.remove(0);
+                    dashboardViewModel.updateHistoryCache(metricType + "_wave", realtimeWaveformEntries);
+                    updateWaveformUI();
                 }
             } catch (Exception e) {}
         }
     }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        binding = null;
+    private void updateDetailStatusMessage(float value) {
+        String status;
+        int color = Color.parseColor("#4CAF50");
+
+        if ("heart_rate".equals(metricType)) {
+            if (value > 100) { status = "Cảnh báo: Nhịp tim đang cao"; color = Color.RED; }
+            else if (value < 60 && value > 0) { status = "Cảnh báo: Nhịp tim đang thấp"; color = Color.RED; }
+            else { status = "Trạng thái: Nhịp tim ổn định"; }
+        } else if ("spo2".equals(metricType)) {
+            if (value < 94 && value > 0) { status = "Cảnh báo: Nồng độ Oxy thấp"; color = Color.RED; }
+            else { status = "Trạng thái: Nồng độ Oxy tốt"; }
+        } else if ("temperature".equals(metricType)) {
+            if (value > 37.0f) { status = "Cảnh báo: Thân nhiệt cao (Sốt)"; color = Color.RED; }
+            else if (value < 30.0f && value > 0) { status = "Cảnh báo: Thân nhiệt thấp (Nguy hiểm)"; color = Color.RED; }
+            else if ((value >= 30.0f && value < 31.0f) || (value > 35.0f && value <= 37.0f)) { status = "Cảnh báo: Thân nhiệt không ổn định"; color = Color.parseColor("#FFD600"); }
+            else if (value >= 31.0f && value <= 35.0f) { status = "Trạng thái: Thân nhiệt bình thường"; color = Color.parseColor("#4CAF50"); }
+            else { status = "Trạng thái: Bình thường"; }
+        } else if ("dust".equals(metricType)) {
+            if (value > 50) { status = "Cảnh báo: Chất lượng không khí kém"; color = Color.parseColor("#FB8C00"); }
+            else { status = "Trạng thái: Không khí trong lành"; }
+        } else {
+            status = "Trạng thái: Bình thường";
+        }
+
+        binding.tvMetricStatusDetail.setText(status);
+        binding.tvMetricStatusDetail.setTextColor(color);
+        binding.tvCurrentValue.setTextColor(color);
     }
+
+    private void updateWaveformUI() {
+        if (binding == null) return;
+        LineData ld = binding.chartRealtimeWaveform.getData();
+        if (ld != null) {
+            ld.clearValues();
+            LineDataSet set = createWaveformDataSet();
+            ld.addDataSet(set);
+            ld.notifyDataChanged();
+            binding.chartRealtimeWaveform.notifyDataSetChanged();
+            binding.chartRealtimeWaveform.setVisibleXRangeMaximum(30);
+            binding.chartRealtimeWaveform.moveViewToX(graphXIndex);
+        }
+    }
+
+    @Override
+    public void onDestroyView() { super.onDestroyView(); binding = null; }
 }

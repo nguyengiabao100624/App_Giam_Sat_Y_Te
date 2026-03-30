@@ -3,7 +3,6 @@ package com.example.loginanimatedapp;
 import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -17,16 +16,14 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
@@ -39,8 +36,6 @@ import com.example.loginanimatedapp.model.Notification;
 import com.example.loginanimatedapp.service.NotificationService;
 import com.example.loginanimatedapp.ui.dashboard.DashboardViewModel;
 
-import java.util.Map;
-
 public class DashboardActivity extends AppCompatActivity {
 
     private ActivityDashboardBinding binding;
@@ -48,6 +43,9 @@ public class DashboardActivity extends AppCompatActivity {
     private DashboardViewModel dashboardViewModel;
     private TextView tvBadgeCount;
     private static final String CHANNEL_ID = "HEALTH_ALERT_CHANNEL";
+
+    private float dX, dY;
+    private static final int CLICK_DRAG_TOLERANCE = 10;
 
     private final ActivityResultLauncher<String> requestNotificationPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -103,10 +101,10 @@ public class DashboardActivity extends AppCompatActivity {
             dashboardViewModel.startListeningForNotifications();
             dashboardViewModel.getUnreadCount().observe(this, this::updateNotificationBadge);
             
-            // Khởi động service với độ trễ để app ổn định trước
             startAlertServiceDelayed();
 
-            handleNotificationIntent(getIntent());
+            // Xử lý Intent từ thông báo sau khi NavController đã sẵn sàng
+            new Handler(Looper.getMainLooper()).postDelayed(() -> handleNotificationIntent(getIntent()), 600);
             
         } catch (Exception e) {
             Log.e("Dashboard", "Lỗi onCreate: " + e.getMessage());
@@ -131,6 +129,7 @@ public class DashboardActivity extends AppCompatActivity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        setIntent(intent); 
         handleNotificationIntent(intent);
     }
 
@@ -141,10 +140,16 @@ public class DashboardActivity extends AppCompatActivity {
                 if (notification != null && navController != null) {
                     Bundle args = new Bundle();
                     args.putSerializable("notification", notification);
+                    
+                    // Thực hiện điều hướng
                     navController.navigate(R.id.navigation_notification_detail, args);
+                    
+                    // QUAN TRỌNG: Xóa extra sau khi đã xử lý để tránh re-navigation khi xoay màn hình
+                    intent.removeExtra("notification_obj");
+                    Log.d("Dashboard", "Đã điều hướng tới chi tiết thông báo: " + notification.getTitle());
                 }
             } catch (Exception e) {
-                Log.e("Dashboard", "Lỗi điều hướng: " + e.getMessage());
+                Log.e("Dashboard", "Lỗi điều hướng từ Intent: " + e.getMessage());
             }
         }
     }
@@ -195,8 +200,42 @@ public class DashboardActivity extends AppCompatActivity {
 
     private void setupFabActions() {
         binding.fabAdd.setOnClickListener(v -> startActivity(new Intent(this, AddDeviceActivity.class)));
-        binding.fabChat.setOnClickListener(v -> {
-            if (navController != null) navController.navigate(R.id.navigation_chat);
+        
+        binding.fabChat.setOnTouchListener(new View.OnTouchListener() {
+            private float initialX, initialY;
+            private boolean isMoving = false;
+
+            @Override
+            public boolean onTouch(View view, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        dX = view.getX() - event.getRawX();
+                        dY = view.getY() - event.getRawY();
+                        initialX = event.getRawX();
+                        initialY = event.getRawY();
+                        isMoving = false;
+                        return true;
+
+                    case MotionEvent.ACTION_MOVE:
+                        float newX = event.getRawX() + dX;
+                        float newY = event.getRawY() + dY;
+                        View parent = (View) view.getParent();
+                        if (newX < 0) newX = 0;
+                        if (newX > parent.getWidth() - view.getWidth()) newX = parent.getWidth() - view.getWidth();
+                        if (newY < 0) newY = 0;
+                        if (newY > parent.getHeight() - view.getHeight()) newY = parent.getHeight() - view.getHeight();
+                        view.animate().x(newX).y(newY).setDuration(0).start();
+                        if (Math.abs(event.getRawX() - initialX) > CLICK_DRAG_TOLERANCE || 
+                            Math.abs(event.getRawY() - initialY) > CLICK_DRAG_TOLERANCE) isMoving = true;
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                        if (!isMoving) if (navController != null) navController.navigate(R.id.navigation_chat);
+                        return true;
+                    default:
+                        return false;
+                }
+            }
         });
     }
 
@@ -225,9 +264,7 @@ public class DashboardActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        try {
-            unregisterReceiver(updateDeviceReceiver);
-        } catch (Exception ignored) {}
+        try { unregisterReceiver(updateDeviceReceiver); } catch (Exception ignored) {}
     }
 
     @Override

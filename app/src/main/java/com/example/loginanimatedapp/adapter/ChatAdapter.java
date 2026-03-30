@@ -3,6 +3,8 @@ package com.example.loginanimatedapp.adapter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -55,16 +57,43 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
 
     static class ChatViewHolder extends RecyclerView.ViewHolder {
         private final TextView messageText;
+        private final ImageView chatImage;
         private final Markwon markwon;
+        private final ProgressBar pbThinking;
+        private final View layoutBotIcon;
 
         public ChatViewHolder(@NonNull View itemView, Markwon markwon) {
             super(itemView);
             this.markwon = markwon;
             messageText = itemView.findViewById(R.id.tv_message);
+            chatImage = itemView.findViewById(R.id.iv_chat_image);
+            pbThinking = itemView.findViewById(R.id.pb_bot_thinking);
+            layoutBotIcon = itemView.findViewById(R.id.layout_bot_icon);
         }
 
         void bind(ChatMessage chatMessage) {
-            markwon.setMarkdown(messageText, chatMessage.getMessage());
+            if (chatMessage.isTyping()) {
+                messageText.setVisibility(View.GONE);
+                if (pbThinking != null) pbThinking.setVisibility(View.VISIBLE);
+                if (layoutBotIcon != null) layoutBotIcon.setVisibility(View.VISIBLE);
+            } else {
+                if (pbThinking != null) pbThinking.setVisibility(View.GONE);
+                if (chatMessage.getMessage() == null || chatMessage.getMessage().isEmpty()) {
+                    messageText.setVisibility(View.GONE);
+                } else {
+                    messageText.setVisibility(View.VISIBLE);
+                    markwon.setMarkdown(messageText, chatMessage.getMessage());
+                }
+            }
+
+            if (chatImage != null) {
+                if (chatMessage.getImage() != null) {
+                    chatImage.setVisibility(View.VISIBLE);
+                    chatImage.setImageBitmap(chatMessage.getImage());
+                } else {
+                    chatImage.setVisibility(View.GONE);
+                }
+            }
         }
     }
 }

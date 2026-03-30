@@ -46,6 +46,15 @@
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="#4CAF50"/>
+                    <TextView
+                        android:id="@+id/tv_status_detail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Hệ thống đang hoạt động ổn định"
+                        android:textSize="12sp"
+                        android:textColor="#9E9E9E"
+                        android:layout_marginTop="2dp"
+                        android:visibility="visible"/>
                 </LinearLayout>
                 <ImageView
                     android:id="@+id/iv_status_icon"

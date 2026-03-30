@@ -26,10 +26,24 @@
             android:textColor="@color/black" />
 
         <TextView
+            android:id="@+id/tv_clear_all"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Xóa tất cả"
+            android:textColor="@android:color/holo_red_dark"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:padding="8dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
             android:id="@+id/tv_mark_read_all"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Đánh dấu đã đọc tất cả"
+            android:text="Đọc tất cả"
             android:textColor="@color/orange_main"
             android:textSize="13sp"
             android:textStyle="bold"

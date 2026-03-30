@@ -29,18 +29,23 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         app:navGraph="@navigation/mobile_navigation" />
 
-    <!-- Chat Floating Bubble -->
+    <!-- Chat Floating Widget (Nút chuẩn, Icon To) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_chat"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="100dp"
-        android:src="@drawable/ic_chat_24"
+        android:layout_marginBottom="110dp"
+        android:src="@drawable/ic_chatbot_icon"
         app:backgroundTint="@color/white"
-        app:tint="@color/orange_main"
-        app:elevation="6dp" />
+        app:elevation="6dp"
+        app:borderWidth="1dp"
+        app:strokeColor="@color/orange_main"
+        app:fabCustomSize="60dp"
+        app:maxImageSize="48dp"
+        app:fabSize="auto"
+        app:tint="@null" />
 
     <com.google.android.material.bottomappbar.BottomAppBar
         android:id="@+id/bottomAppBar"

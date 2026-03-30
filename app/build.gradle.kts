@@ -94,4 +94,7 @@ dependencies {
 
     // Markdown rendering
     implementation("io.noties.markwon:core:4.6.2")
+
+    // Lottie for animations
+    implementation("com.airbnb.android:lottie:6.4.0")
 }

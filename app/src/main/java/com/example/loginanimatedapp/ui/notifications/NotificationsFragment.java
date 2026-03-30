@@ -1,5 +1,6 @@
 package com.example.loginanimatedapp.ui.notifications;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -104,10 +105,26 @@ public class NotificationsFragment extends Fragment implements NotificationsAdap
 
     private void setupListeners() {
         binding.tvMarkReadAll.setOnClickListener(v -> {
-            if (notificationRef != null) {
+            if (notificationRef != null && !allNotifications.isEmpty()) {
                 for (Notification n : allNotifications) {
                     if (!n.isRead()) notificationRef.child(n.getId()).child("read").setValue(true);
                 }
+                Toast.makeText(getContext(), "Đã đánh dấu tất cả là đã đọc", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        binding.tvClearAll.setOnClickListener(v -> {
+            if (notificationRef != null && !allNotifications.isEmpty()) {
+                new AlertDialog.Builder(getContext())
+                        .setTitle("Xóa tất cả thông báo")
+                        .setMessage("Bạn có chắc chắn muốn xóa tất cả thông báo không?")
+                        .setPositiveButton("Xóa", (dialog, which) -> {
+                            notificationRef.removeValue().addOnSuccessListener(aVoid -> {
+                                Toast.makeText(getContext(), "Đã xóa tất cả thông báo", Toast.LENGTH_SHORT).show();
+                            });
+                        })
+                        .setNegativeButton("Hủy", null)
+                        .show();
             }
         });
 
@@ -177,6 +194,22 @@ public class NotificationsFragment extends Fragment implements NotificationsAdap
                 Log.e("Notif", "Lỗi điều hướng: " + e.getMessage());
             }
         }
+    }
+
+    @Override
+    public void onNotificationLongClick(Notification notification, int position) {
+        new AlertDialog.Builder(getContext())
+                .setTitle("Xóa thông báo")
+                .setMessage("Bạn có muốn xóa thông báo này không?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    if (notificationRef != null && notification.getId() != null) {
+                        notificationRef.child(notification.getId()).removeValue().addOnSuccessListener(aVoid -> {
+                            Toast.makeText(getContext(), "Đã xóa thông báo", Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
     }
 
     @Override

@@ -41,6 +41,17 @@
                 android:layout_marginTop="8dp"/>
 
             <TextView
+                android:id="@+id/tv_metric_status_detail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Đang phân tích trạng thái..."
+                android:gravity="center"
+                android:textSize="14sp"
+                android:textColor="@color/app_gray"
+                android:layout_marginTop="4dp"
+                android:textStyle="italic"/>
+
+            <TextView
                 android:id="@+id/tv_last_updated"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -48,7 +59,7 @@
                 android:gravity="center"
                 android:textSize="12sp"
                 android:textColor="@color/app_gray"
-                android:layout_marginTop="4dp"/>
+                android:layout_marginTop="8dp"/>
 
             <!-- REAL-TIME WAVEFORM CHART SECTION -->
             <TextView
@@ -62,10 +73,10 @@
 
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
-                android:layout_height="150dp"
+                android:layout_height="180dp"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="#263238"> <!-- Dark background for medical vibe -->
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="#FFFFFF">
 
                 <com.github.mikephil.charting.charts.LineChart
                     android:id="@+id/chart_realtime_waveform"
@@ -191,7 +202,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Biểu đồ lịch sử (7 ngày)"
+                android:text="Biểu đồ lịch sử đo"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:layout_marginTop="32dp"
@@ -202,7 +213,7 @@
                 android:layout_height="250dp"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
-                app:cardBackgroundColor="#E3F2FD"> <!-- Light Blue background -->
+                app:cardBackgroundColor="#F8F9FA">
                 <com.github.mikephil.charting.charts.LineChart
                     android:id="@+id/chart_history"
                     android:layout_width="match_parent"
