@@ -38,24 +38,26 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull ChatViewHolder holder, int position) {
-        holder.bind(chatMessages.get(position));
+        if (chatMessages != null && position < chatMessages.size()) {
+            holder.bind(chatMessages.get(position));
+        }
     }
 
     @Override
     public int getItemCount() {
-        return chatMessages.size();
+        return chatMessages != null ? chatMessages.size() : 0;
     }
 
     @Override
     public int getItemViewType(int position) {
-        if (chatMessages.get(position).isSentByUser()) {
+        if (chatMessages != null && chatMessages.get(position).isSentByUser()) {
             return R.layout.item_chat_sent;
         } else {
             return R.layout.item_chat_received;
         }
     }
 
-    static class ChatViewHolder extends RecyclerView.ViewHolder {
+    public static class ChatViewHolder extends RecyclerView.ViewHolder {
         private final TextView messageText;
         private final ImageView chatImage;
         private final Markwon markwon;
@@ -71,18 +73,20 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
             layoutBotIcon = itemView.findViewById(R.id.layout_bot_icon);
         }
 
-        void bind(ChatMessage chatMessage) {
+        public void bind(ChatMessage chatMessage) {
             if (chatMessage.isTyping()) {
-                messageText.setVisibility(View.GONE);
+                if (messageText != null) messageText.setVisibility(View.GONE);
                 if (pbThinking != null) pbThinking.setVisibility(View.VISIBLE);
                 if (layoutBotIcon != null) layoutBotIcon.setVisibility(View.VISIBLE);
             } else {
                 if (pbThinking != null) pbThinking.setVisibility(View.GONE);
                 if (chatMessage.getMessage() == null || chatMessage.getMessage().isEmpty()) {
-                    messageText.setVisibility(View.GONE);
+                    if (messageText != null) messageText.setVisibility(View.GONE);
                 } else {
-                    messageText.setVisibility(View.VISIBLE);
-                    markwon.setMarkdown(messageText, chatMessage.getMessage());
+                    if (messageText != null) {
+                        messageText.setVisibility(View.VISIBLE);
+                        markwon.setMarkdown(messageText, chatMessage.getMessage());
+                    }
                 }
             }
 
