@@ -40,9 +40,7 @@ import com.example.loginanimatedapp.databinding.FragmentChatBinding;
 import com.example.loginanimatedapp.model.ChatMessage;
 import com.example.loginanimatedapp.ui.dashboard.DashboardViewModel;
 import com.example.loginanimatedapp.utils.AppConstants;
-
 import com.google.ai.client.generativeai.GenerativeModel;
-import com.google.ai.client.generativeai.java.ChatFutures;
 import com.google.ai.client.generativeai.java.GenerativeModelFutures;
 import com.google.ai.client.generativeai.type.Content;
 import com.google.ai.client.generativeai.type.GenerateContentResponse;
