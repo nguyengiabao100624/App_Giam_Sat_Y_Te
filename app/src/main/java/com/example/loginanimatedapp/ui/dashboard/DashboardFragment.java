@@ -24,8 +24,6 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.loginanimatedapp.R;
 import com.example.loginanimatedapp.databinding.FragmentDashboardBinding;
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -62,7 +60,8 @@ public class DashboardFragment extends Fragment implements OnMapReadyCallback {
                 if (isGranted) enableMyLocation();
             });
 
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         binding = FragmentDashboardBinding.inflate(inflater, container, false);
         mapView = binding.mapView;
         mapView.onCreate(savedInstanceState);
@@ -76,7 +75,10 @@ public class DashboardFragment extends Fragment implements OnMapReadyCallback {
         dashboardViewModel = new ViewModelProvider(requireActivity()).get(DashboardViewModel.class);
 
         if (getActivity() instanceof AppCompatActivity) {
-            ((AppCompatActivity) getActivity()).getSupportActionBar().setTitle("Bản đồ chi tiết");
+            AppCompatActivity activity = (AppCompatActivity) getActivity();
+            if (activity.getSupportActionBar() != null) {
+                activity.getSupportActionBar().setTitle("Bản đồ chi tiết");
+            }
         }
 
         setupClickListeners();
@@ -111,8 +113,6 @@ public class DashboardFragment extends Fragment implements OnMapReadyCallback {
         
         executorService.execute(() -> {
             try {
-                // Truy vấn Overpass nâng cao: Tìm cả node, way, relation và lấy tọa độ trung tâm (center)
-                // Bao gồm cả hospital và clinic để tìm kiếm đầy đủ hơn
                 String query = "[out:json];" +
                         "(" +
                         "node[\"amenity\"~\"hospital|clinic\"](around:5000," + lat + "," + lon + ");" +
@@ -138,7 +138,6 @@ public class DashboardFragment extends Fragment implements OnMapReadyCallback {
                 new Handler(Looper.getMainLooper()).post(() -> {
                     if (!isAdded() || googleMap == null) return;
 
-                    // Xóa marker cũ và reset userMarker để vẽ lại sau khi clear
                     googleMap.clear();
                     userMarker = null;
                     if (currentLocation != null) {
@@ -153,7 +152,6 @@ public class DashboardFragment extends Fragment implements OnMapReadyCallback {
                     for (int i = 0; i < elements.length(); i++) {
                         JSONObject element = elements.optJSONObject(i);
                         if (element != null) {
-                            // Lấy tọa độ: Ưu tiên 'lat'/'lon' (cho node) hoặc 'center' (cho way/relation)
                             double hLat = element.optDouble("lat", Double.NaN);
                             double hLon = element.optDouble("lon", Double.NaN);
                             
@@ -207,7 +205,8 @@ public class DashboardFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    private void addUserMarker(LatLng location) {
+    private void addUserMarker(@NonNull LatLng location) {
+        if (googleMap == null) return;
         if (userMarker == null) {
             userMarker = googleMap.addMarker(new MarkerOptions()
                     .position(location)
@@ -251,15 +250,20 @@ public class DashboardFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void enableMyLocation() {
-        if (googleMap != null && ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (googleMap != null && isAdded() && ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             googleMap.setMyLocationEnabled(true);
             googleMap.getUiSettings().setMyLocationButtonEnabled(true);
             googleMap.getUiSettings().setZoomControlsEnabled(true);
         }
     }
 
-    @Override public void onResume() { super.onResume(); mapView.onResume(); }
-    @Override public void onPause() { super.onPause(); mapView.onPause(); }
-    @Override public void onDestroy() { super.onDestroy(); mapView.onDestroy(); }
-    @Override public void onLowMemory() { super.onLowMemory(); mapView.onLowMemory(); }
+    @Override public void onResume() { super.onResume(); if (mapView != null) mapView.onResume(); }
+    @Override public void onPause() { super.onPause(); if (mapView != null) mapView.onPause(); }
+    @Override public void onDestroy() { 
+        super.onDestroy(); 
+        if (mapView != null) mapView.onDestroy(); 
+        executorService.shutdown();
+        binding = null; 
+    }
+    @Override public void onLowMemory() { super.onLowMemory(); if (mapView != null) mapView.onLowMemory(); }
 }

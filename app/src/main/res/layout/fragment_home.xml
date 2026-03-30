@@ -35,14 +35,14 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Trạng thái hiện tại"
+                        android:text="@string/current_status"
                         android:textSize="14sp"
                         android:textColor="#757575"/>
                     <TextView
                         android:id="@+id/tv_home_overall_status"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="ĐANG KẾT NỐI..."
+                        android:text="@string/connecting"
                         android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="#4CAF50"/>
@@ -50,7 +50,7 @@
                         android:id="@+id/tv_status_detail"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Hệ thống đang hoạt động ổn định"
+                        android:text="@string/status_ok"
                         android:textSize="12sp"
                         android:textColor="#9E9E9E"
                         android:layout_marginTop="2dp"
@@ -60,6 +60,7 @@
                     android:id="@+id/iv_status_icon"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
+                    android:contentDescription="@string/desc_status_icon"
                     android:src="@drawable/ic_check_circle_green" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -92,7 +93,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Nhịp tim"
+                            android:text="@string/heart_rate"
                             android:textSize="16sp"
                             android:textStyle="bold"
                             android:textColor="@android:color/black"
@@ -101,6 +102,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
+                            android:contentDescription="@string/desc_heart_rate_icon"
                             android:src="@drawable/ic_heart_rate"
                             app:tint="#F44336"
                             android:layout_alignParentEnd="true"
@@ -110,10 +112,11 @@
                         android:id="@+id/tv_home_heart_rate"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="-- bpm"
+                        android:text="@string/loading_dots"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
+                        android:layout_marginTop="8dp"
+                        tools:text="75 bpm"/>
 
                     <View android:layout_width="match_parent" android:layout_height="12dp"/>
 
@@ -121,17 +124,19 @@
                         android:id="@+id/tv_time_hr"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Đo lúc: --"
+                        android:text="@string/loading_dots"
                         android:textSize="10sp"
-                        android:textColor="#757575"/>
+                        android:textColor="#757575"
+                        tools:text="Đo lúc: 10:30"/>
                     <TextView
                         android:id="@+id/tv_status_measure_hr"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Trạng thái: --"
+                        android:text="@string/loading_dots"
                         android:textSize="10sp"
                         android:textColor="@color/orange_main"
-                        android:layout_marginTop="2dp"/>
+                        android:layout_marginTop="2dp"
+                        tools:text="Trạng thái: Bình thường"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -156,7 +161,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Oxy trong máu"
+                            android:text="@string/spo2_label"
                             android:textSize="16sp"
                             android:textStyle="bold"
                             android:textColor="@android:color/black"
@@ -165,6 +170,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
+                            android:contentDescription="@string/desc_spo2_icon"
                             android:src="@drawable/ic_spo2"
                             app:tint="#2196F3"
                             android:layout_alignParentEnd="true"
@@ -174,10 +180,11 @@
                         android:id="@+id/tv_home_spo2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="-- %"
+                        android:text="@string/loading_dots"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
+                        android:layout_marginTop="8dp"
+                        tools:text="98 %"/>
 
                     <View android:layout_width="match_parent" android:layout_height="12dp"/>
 
@@ -185,17 +192,19 @@
                         android:id="@+id/tv_time_spo2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Đo lúc: --"
+                        android:text="@string/loading_dots"
                         android:textSize="10sp"
-                        android:textColor="#757575"/>
+                        android:textColor="#757575"
+                        tools:text="Đo lúc: 10:30"/>
                     <TextView
                         android:id="@+id/tv_status_measure_spo2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Trạng thái: --"
+                        android:text="@string/loading_dots"
                         android:textSize="10sp"
                         android:textColor="@color/orange_main"
-                        android:layout_marginTop="2dp"/>
+                        android:layout_marginTop="2dp"
+                        tools:text="Trạng thái: Bình thường"/>
 
                     <ProgressBar
                         android:id="@+id/progress_home_spo2"
@@ -207,7 +216,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Thân nhiệt & Môi trường -->
+            <!-- Thân nhiệt -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/card_temperature"
                 android:layout_width="0dp"
@@ -228,7 +237,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Thân nhiệt"
+                            android:text="@string/body_temp"
                             android:textSize="16sp"
                             android:textStyle="bold"
                             android:textColor="@android:color/black"
@@ -237,6 +246,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
+                            android:contentDescription="@string/desc_temp_icon"
                             android:src="@drawable/ic_temperature"
                             app:tint="#FF9800"
                             android:layout_alignParentEnd="true"
@@ -246,26 +256,29 @@
                         android:id="@+id/tv_home_temperature"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="-- °C"
+                        android:text="@string/loading_dots"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
+                        android:layout_marginTop="8dp"
+                        tools:text="36.5 °C"/>
                     <TextView
                         android:id="@+id/tv_home_temp_amb"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Môi trường: -- °C"
+                        android:text="@string/loading_dots"
                         android:textSize="11sp"
                         android:textColor="#757575"
-                        android:layout_marginTop="4dp"/>
+                        android:layout_marginTop="4dp"
+                        tools:text="Môi trường: 28 °C"/>
                     <TextView
                         android:id="@+id/tv_time_temp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Cập nhật: --"
+                        android:text="@string/loading_dots"
                         android:textSize="10sp"
                         android:textColor="#9E9E9E"
-                        android:layout_marginTop="4dp"/>
+                        android:layout_marginTop="4dp"
+                        tools:text="Cập nhật: 10:30"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -290,7 +303,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Bụi mịn"
+                            android:text="@string/dust_label"
                             android:textSize="16sp"
                             android:textStyle="bold"
                             android:textColor="@android:color/black"
@@ -299,6 +312,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
+                            android:contentDescription="@string/desc_dust_icon"
                             android:src="@drawable/ic_info_circle_blue"
                             app:tint="#607D8B"
                             android:layout_alignParentEnd="true"
@@ -308,18 +322,20 @@
                         android:id="@+id/tv_home_dust"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="-- µg/m³"
+                        android:text="@string/loading_dots"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        android:layout_marginTop="8dp"/>
+                        android:layout_marginTop="8dp"
+                        tools:text="15 µg/m³"/>
                     <TextView
                         android:id="@+id/tv_time_dust"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Cập nhật: --"
+                        android:text="@string/loading_dots"
                         android:textSize="10sp"
                         android:textColor="#9E9E9E"
-                        android:layout_marginTop="16dp"/>
+                        android:layout_marginTop="16dp"
+                        tools:text="Cập nhật: 10:30"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -349,7 +365,7 @@
                         android:layout_margin="12dp"
                         android:paddingHorizontal="16dp"
                         android:paddingVertical="8dp"
-                        android:text="Xem bản đồ"
+                        android:text="@string/view_map"
                         android:background="@drawable/btn_filled_orange"
                         android:textColor="@color/white"
                         android:textStyle="bold"

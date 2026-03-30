@@ -1,3 +1,55 @@
 <resources>
     <string name="app_name">Healthy 365</string>
+    <string name="welcome_user">Xin chào %1$s!</string>
+    <string name="suggest_health">Tình trạng sức khỏe của tôi hiện tại thế nào?</string>
+    <string name="suggest_heart">Nhịp tim của tôi có ổn định không?</string>
+    <string name="suggest_spo2">Chỉ số SpO2 của tôi có đang ở mức an toàn?</string>
+    <string name="suggest_emergency">Tôi cần làm gì trong tình huống khẩn cấp?</string>
+
+    <!-- Common -->
+    <string name="btn_close">Đóng</string>
+    <string name="desc_icon">Biểu tượng</string>
+    <string name="loading_dots">--</string>
+
+    <!-- Login Screen -->
+    <string name="login_title">Đăng nhập</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Mật khẩu</string>
+    <string name="forgot_password">Quên mật khẩu?</string>
+    <string name="btn_login">Đăng nhập</string>
+    <string name="no_account_signup">Bạn chưa có tài khoản?\nĐăng ký ngay</string>
+
+    <!-- Register Screen -->
+    <string name="register_title">Đăng ký</string>
+    <string name="hint_full_name">Họ và tên</string>
+    <string name="hint_email_req">Email (bắt buộc)</string>
+    <string name="hint_phone_optional">Số điện thoại (không bắt buộc)</string>
+    <string name="hint_confirm_password">Xác nhận mật khẩu</string>
+    <string name="btn_register">Đăng ký</string>
+    <string name="already_have_account">Bạn đã có tài khoản?\nĐăng nhập</string>
+
+    <!-- Home Fragment -->
+    <string name="current_status">Trạng thái hiện tại</string>
+    <string name="connecting">ĐANG KẾT NỐI...</string>
+    <string name="status_ok">Hệ thống đang hoạt động ổn định</string>
+    <string name="heart_rate">Nhịp tim</string>
+    <string name="heart_rate_unit">%1$s bpm</string>
+    <string name="spo2_label">Oxy trong máu</string>
+    <string name="spo2_unit">%1$s %%</string>
+    <string name="body_temp">Thân nhiệt</string>
+    <string name="temp_unit">%1$s °C</string>
+    <string name="ambient_temp">Môi trường: %1$s °C</string>
+    <string name="dust_label">Bụi mịn</string>
+    <string name="dust_unit">%1$s µg/m³</string>
+    <string name="last_measure">Đo lúc: %1$s</string>
+    <string name="last_update">Cập nhật: %1$s</string>
+    <string name="status_measure">Trạng thái: %1$s</string>
+    <string name="view_map">Xem bản đồ</string>
+
+    <!-- Accessibility Descriptions -->
+    <string name="desc_status_icon">Biểu tượng trạng thái</string>
+    <string name="desc_heart_rate_icon">Biểu tượng nhịp tim</string>
+    <string name="desc_spo2_icon">Biểu tượng SpO2</string>
+    <string name="desc_temp_icon">Biểu tượng nhiệt độ</string>
+    <string name="desc_dust_icon">Biểu tượng bụi mịn</string>
 </resources>

@@ -15,7 +15,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:text="Login"
+            android:text="@string/login_title"
             android:textColor="@android:color/black"
             android:textSize="32sp"
             android:textStyle="bold" />
@@ -26,12 +26,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:hint="Email">
+            android:hint="@string/hint_email">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edtLoginEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:importantForAutofill="no"
                 android:inputType="textEmailAddress" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -41,13 +42,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:hint="Password"
+            android:hint="@string/hint_password"
             app:passwordToggleEnabled="true">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edtLoginPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:importantForAutofill="no"
                 android:inputType="textPassword" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -57,7 +59,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="end"
             android:layout_marginTop="8dp"
-            android:text="Forgot password?" />
+            android:text="@string/forgot_password" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnLogin"
@@ -65,7 +67,7 @@
             android:layout_height="45dp"
             android:layout_marginTop="24dp"
             android:background="@drawable/bg_button"
-            android:text="Login"
+            android:text="@string/btn_login"
             android:textColor="@color/white" />
 
         <TextView
@@ -74,7 +76,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:gravity="center"
-            android:text="Don't have an account?\nSign Up" />
+            android:text="@string/no_account_signup" />
 
     </LinearLayout>
 </ScrollView>

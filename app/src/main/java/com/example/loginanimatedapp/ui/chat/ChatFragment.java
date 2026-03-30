@@ -81,11 +81,11 @@ public class ChatFragment extends Fragment {
     private boolean autoSendAfterVoice = false;
 
     private static final int NUM_BARS = 90;
-    private static final float NOISE_THRESHOLD = 4.0f; 
+    private static final float NOISE_THRESHOLD = 4.0f;
     private final float[] barHeights = new float[NUM_BARS];
     private float currentVolume = 0f;
     private final Handler waveformHandler = new Handler(Looper.getMainLooper());
-    
+
     private final List<String> historyDataList = new ArrayList<>();
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
@@ -152,7 +152,7 @@ public class ChatFragment extends Fragment {
             }
             checkWelcomeVisibility();
         });
-        
+
         setupUI();
         setupSpeechRecognizer();
         initWaveformBars();
@@ -182,7 +182,7 @@ public class ChatFragment extends Fragment {
         binding.btnSuggestHeart.setOnClickListener(v -> fastSend("Giải thích các chỉ số nhịp tim của tôi có ý nghĩa gì?"));
         binding.btnSuggestSpo2.setOnClickListener(v -> fastSend("Nồng độ Oxy SpO2 của tôi hiện tại thế nào? Nó có ổn không?"));
         binding.btnSuggestEmergency.setOnClickListener(v -> fastSend("Tôi nên làm gì trong các tình huống khẩn cấp về sức khỏe?"));
-        
+
         binding.etMessageInput.setOnClickListener(v -> hideAttachmentMenu());
     }
 
@@ -207,12 +207,12 @@ public class ChatFragment extends Fragment {
         for (int i = 0; i < NUM_BARS; i++) {
             View bar = new View(getContext());
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(4, 16);
-            params.setMargins(2, 0, 2, 0); 
+            params.setMargins(2, 0, 2, 0);
             bar.setLayoutParams(params);
             GradientDrawable shape = new GradientDrawable();
             shape.setShape(GradientDrawable.RECTANGLE);
             shape.setColor(color);
-            shape.setCornerRadius(15f); 
+            shape.setCornerRadius(15f);
             bar.setBackground(shape);
             binding.llWaveform.addView(bar);
             barHeights[i] = 1f;
@@ -228,14 +228,14 @@ public class ChatFragment extends Fragment {
             if (vol < NOISE_THRESHOLD) vol = 0;
             float targetHeight = 1f + (vol / 2.2f);
             if (targetHeight < 1f) targetHeight = 1f;
-            if (targetHeight > 5.5f) targetHeight = 5.5f; 
+            if (targetHeight > 5.5f) targetHeight = 5.5f;
             barHeights[NUM_BARS - 1] = targetHeight;
             for (int i = 0; i < NUM_BARS; i++) {
                 View bar = binding.llWaveform.getChildAt(i);
                 if (bar != null) bar.setScaleY(barHeights[i]);
             }
             currentVolume *= 0.7f;
-            waveformHandler.postDelayed(this, 50); 
+            waveformHandler.postDelayed(this, 50);
         }
     };
 
@@ -262,7 +262,7 @@ public class ChatFragment extends Fragment {
             }
             @Override public void onBufferReceived(byte[] buffer) {}
             @Override public void onEndOfSpeech() {}
-            @Override public void onError(int error) { 
+            @Override public void onError(int error) {
                 isRecording = false; resetVoiceUI();
                 Toast.makeText(getContext(), "Lỗi nhận dạng giọng nói", Toast.LENGTH_SHORT).show();
             }
@@ -391,7 +391,7 @@ public class ChatFragment extends Fragment {
     private void setupGenerativeModel() {
         String apiKey = BuildConfig.GEMINI_API_KEY;
         if (apiKey == null || apiKey.isEmpty()) return;
-        
+
         try {
             Content.Builder builder = new Content.Builder();
             builder.setRole("system");
@@ -438,18 +438,18 @@ public class ChatFragment extends Fragment {
             Content systemInstruction = builder.build();
 
             GenerativeModel gm = new GenerativeModel(
-                "gemini-3.1-flash-lite-preview",
-                apiKey.trim(),
-                new GenerationConfig.Builder().build(),
-                null, 
-                new RequestOptions(),
-                null, 
-                null, 
-                systemInstruction
+                    "gemini-3.1-flash-lite-preview",
+                    apiKey.trim(),
+                    new GenerationConfig.Builder().build(),
+                    null,
+                    new RequestOptions(),
+                    null,
+                    null,
+                    systemInstruction
             );
             GenerativeModelFutures model = GenerativeModelFutures.from(gm);
             chatViewModel.setChatFutures(model.startChat());
-        } catch (Exception e) { 
+        } catch (Exception e) {
             Log.e(TAG, "Lỗi khởi tạo model: " + e.getMessage());
         }
     }
@@ -461,7 +461,7 @@ public class ChatFragment extends Fragment {
         ChatMessage userMessage = new ChatMessage(text, true);
         if (selectedFileUri != null) userMessage.setImageUri(selectedFileUri.toString());
         if (cameraBitmap != null) userMessage.setImageBitmap(cameraBitmap);
-        
+
         chatViewModel.addMessage(userMessage);
         binding.etMessageInput.setText("");
         clearAllAttachments();
@@ -471,7 +471,7 @@ public class ChatFragment extends Fragment {
         chatViewModel.addMessage(typingMessage);
 
         Map<String, Object> data = sharedViewModel.getDeviceData().getValue();
-        
+
         Object bpmVal = data != null ? (data.containsKey("BPM") ? data.get("BPM") : data.get("heart_rate")) : 0;
         Object spo2Val = data != null ? (data.containsKey("SpO2") ? data.get("SpO2") : data.get("spo2")) : 0;
         Object tempObjVal = data != null ? (data.containsKey("TempObj") ? data.get("TempObj") : data.get("temperature")) : 0;
@@ -490,7 +490,7 @@ public class ChatFragment extends Fragment {
                 dustVal != null ? dustVal.toString() : "0",
                 timeVal != null ? timeVal.toString() : "N/A",
                 historyStr.toString());
-        
+
         String fullPrompt = "{Tin nhắn người dùng: " + text + "}" + invisibleContext;
 
         Content.Builder userContentBuilder = new Content.Builder();
