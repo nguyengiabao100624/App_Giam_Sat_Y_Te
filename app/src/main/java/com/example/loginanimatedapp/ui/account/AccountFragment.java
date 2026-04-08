@@ -46,7 +46,7 @@ public class AccountFragment extends Fragment {
 
     private User currentUser;
     private Uri newAvatarUri = null;
-    private ActivityResultLauncher<Intent> imagePickerLauncher;
+    private ActivityResultLauncher<androidx.activity.result.PickVisualMediaRequest> pickMedia;
     private FirebaseAuth mAuth;
 
     private boolean isPhoneVisible = false;
@@ -97,16 +97,16 @@ public class AccountFragment extends Fragment {
     }
 
     private void setupImagePicker() {
-        imagePickerLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    newAvatarUri = result.getData().getData();
-                    Glide.with(this).load(newAvatarUri).into(binding.ivAvatar); 
-                    Glide.with(this).load(newAvatarUri).into(binding.ivEditAvatar); 
-                    checkForChanges();
-                }
-            });
+        pickMedia = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+            if (uri != null) {
+                newAvatarUri = uri;
+                Glide.with(this).load(newAvatarUri).into(binding.ivAvatar); 
+                Glide.with(this).load(newAvatarUri).into(binding.ivEditAvatar); 
+                checkForChanges();
+            } else {
+                Toast.makeText(getContext(), "Chưa chọn ảnh nào", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void setupObservers() {
@@ -305,8 +305,9 @@ public class AccountFragment extends Fragment {
     }
 
     private void openImagePicker() {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        imagePickerLauncher.launch(intent);
+        pickMedia.launch(new androidx.activity.result.PickVisualMediaRequest.Builder()
+                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                .build());
     }
 
     private void showLogoutDialog() {
