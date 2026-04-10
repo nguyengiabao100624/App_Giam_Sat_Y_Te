@@ -64,9 +64,18 @@
             android:layout_width="match_parent"
             android:layout_height="45dp"
             android:layout_marginTop="24dp"
-            android:background="@drawable/bg_button"
+            android:background="@drawable/btn_filled_orange"
             android:text="Login"
             android:textColor="@color/white" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnLoginWithPhone"
+            android:layout_width="match_parent"
+            android:layout_height="45dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/btn_outline_orange"
+            android:text="Đăng nhập bằng SĐT (OTP)"
+            android:textColor="@color/orange_main" />
 
         <TextView
             android:id="@+id/btnGoToSignUp"

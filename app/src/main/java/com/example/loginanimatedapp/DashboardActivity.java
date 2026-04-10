@@ -61,6 +61,11 @@ public class DashboardActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             String newDeviceId = intent.getStringExtra("device_id");
             if (newDeviceId != null && !newDeviceId.isEmpty()) {
+                // LƯU DEVICE ID VÀO PREFS NGAY LẬP TỨC
+                SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+                prefs.edit().putString("connected_device_id", newDeviceId).apply();
+                Log.d("Dashboard", "Đã lưu Device ID mới: " + newDeviceId);
+
                 if (dashboardViewModel != null) {
                     dashboardViewModel.startListeningForDeviceData(newDeviceId);
                 }
@@ -92,10 +97,14 @@ public class DashboardActivity extends AppCompatActivity {
                 registerReceiver(updateDeviceReceiver, filter);
             }
 
+            // KHÔI PHỤC KẾT NỐI TỪ LẦN TRƯỚC
             SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
             String savedDeviceId = prefs.getString("connected_device_id", "");
             if (!savedDeviceId.isEmpty()) {
+                Log.d("Dashboard", "Khôi phục kết nối tới thiết bị: " + savedDeviceId);
                 dashboardViewModel.startListeningForDeviceData(savedDeviceId);
+            } else {
+                Log.d("Dashboard", "Không tìm thấy thiết bị đã kết nối trước đó.");
             }
 
             dashboardViewModel.startListeningForNotifications();
@@ -103,7 +112,6 @@ public class DashboardActivity extends AppCompatActivity {
             
             startAlertServiceDelayed();
 
-            // Xử lý Intent từ thông báo sau khi NavController đã sẵn sàng
             new Handler(Looper.getMainLooper()).postDelayed(() -> handleNotificationIntent(getIntent()), 600);
             
         } catch (Exception e) {
@@ -140,13 +148,8 @@ public class DashboardActivity extends AppCompatActivity {
                 if (notification != null && navController != null) {
                     Bundle args = new Bundle();
                     args.putSerializable("notification", notification);
-                    
-                    // Thực hiện điều hướng
                     navController.navigate(R.id.navigation_notification_detail, args);
-                    
-                    // QUAN TRỌNG: Xóa extra sau khi đã xử lý để tránh re-navigation khi xoay màn hình
                     intent.removeExtra("notification_obj");
-                    Log.d("Dashboard", "Đã điều hướng tới chi tiết thông báo: " + notification.getTitle());
                 }
             } catch (Exception e) {
                 Log.e("Dashboard", "Lỗi điều hướng từ Intent: " + e.getMessage());

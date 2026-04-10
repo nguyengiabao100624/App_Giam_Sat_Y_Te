@@ -1,6 +1,9 @@
 package com.example.loginanimatedapp.ui.notifications;
 
+import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,20 +47,44 @@ public class NotificationsAdapter extends RecyclerView.Adapter<NotificationsAdap
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Notification notification = notifications.get(position);
+        Context context = holder.itemView.getContext();
         
-        // Sử dụng iconResId từ model (đã được NotificationService gán icon tùy biến)
+        // GIẢI PHÁP CHỐNG CRASH: Kiểm tra Resource ID an toàn
         int iconRes = notification.getIconResId();
-        if (iconRes == 0) iconRes = R.drawable.ic_health_notification;
-        holder.icon.setImageResource(iconRes);
         
+        try {
+            // Thử nạp icon từ ID được lưu
+            if (iconRes != 0) {
+                holder.icon.setImageResource(iconRes);
+            } else {
+                holder.icon.setImageResource(R.drawable.ic_health_notification);
+            }
+        } catch (Resources.NotFoundException e) {
+            // Nếu không tìm thấy ID (do ID cũ từ Firebase không khớp bản build mới)
+            Log.w("NotificationsAdapter", "Resource ID not found: " + iconRes + ". Using default icon.");
+            
+            // TỰ ĐỘNG KHẮC PHỤC DỰA TRÊN TIÊU ĐỀ
+            String title = notification.getTitle() != null ? notification.getTitle().toLowerCase() : "";
+            if (title.contains("sos")) holder.icon.setImageResource(R.drawable.ic_notif_sos);
+            else if (title.contains("ngã") || title.contains("té")) holder.icon.setImageResource(R.drawable.ic_notif_fall);
+            else if (title.contains("nhiệt độ")) holder.icon.setImageResource(R.drawable.ic_notif_temperature);
+            else if (title.contains("nhịp tim")) holder.icon.setImageResource(R.drawable.ic_notif_heart_rate);
+            else if (title.contains("oxy") || title.contains("spo2")) holder.icon.setImageResource(R.drawable.ic_notif_spo2);
+            else holder.icon.setImageResource(R.drawable.ic_health_notification);
+        }
+
         holder.title.setText(notification.getTitle());
         holder.message.setText(notification.getMessage());
         
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm - dd/MM", Locale.getDefault());
-        holder.timestamp.setText(sdf.format(new Date(notification.getTimestamp())));
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm - dd/MM", Locale.getDefault());
+            holder.timestamp.setText(sdf.format(new Date(notification.getTimestamp())));
+        } catch (Exception e) {
+            holder.timestamp.setText("--:--");
+        }
 
         if (!notification.isRead()) {
-            holder.cardBackground.setBackgroundColor(Color.parseColor("#FFF3E0")); // Light orange
+            holder.cardBackground.setBackgroundColor(Color.parseColor("#FFF3E0")); 
             holder.unreadDot.setVisibility(View.VISIBLE);
         } else {
             holder.cardBackground.setBackgroundColor(Color.WHITE);
@@ -65,9 +92,7 @@ public class NotificationsAdapter extends RecyclerView.Adapter<NotificationsAdap
         }
 
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onNotificationClick(notification, position);
-            }
+            if (listener != null) listener.onNotificationClick(notification, position);
         });
 
         holder.itemView.setOnLongClickListener(v -> {

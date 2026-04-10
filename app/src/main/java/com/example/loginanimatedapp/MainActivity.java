@@ -8,7 +8,13 @@ import android.os.Looper;
 import android.util.Patterns;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
+import android.widget.EditText;
 import android.widget.Toast;
+import android.os.CountDownTimer;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.KeyEvent;
+import androidx.appcompat.app.AlertDialog;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -16,9 +22,16 @@ import com.example.loginanimatedapp.databinding.ActivityMainBinding;
 import com.example.loginanimatedapp.model.User;
 import com.example.loginanimatedapp.utils.NotificationHelper;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.PhoneAuthCredential;
+import com.google.firebase.auth.PhoneAuthOptions;
+import com.google.firebase.auth.PhoneAuthProvider;
+import com.google.firebase.FirebaseException;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import java.util.concurrent.TimeUnit;
+import androidx.annotation.NonNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +43,11 @@ public class MainActivity extends AppCompatActivity {
     private DatabaseReference mDatabase;
 
     private static final long ANIM_DURATION = 800;
+    
+    private String mVerificationId;
+    private PhoneAuthProvider.ForceResendingToken mResendToken;
+    private String pendingPhoneNumber;
+    private CountDownTimer countDownTimer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void initFirebase() {
         mAuth = FirebaseAuth.getInstance();
+        mAuth.getFirebaseAuthSettings().setAppVerificationDisabledForTesting(true);
         mDatabase = FirebaseDatabase.getInstance().getReference();
     }
 
@@ -59,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
         binding.layoutRegister.getRoot().setVisibility(View.GONE);
         binding.layoutForgotpassword.getRoot().setVisibility(View.GONE);
         binding.layoutSignupSuccess.getRoot().setVisibility(View.GONE);
+        binding.layoutOtp.getRoot().setVisibility(View.GONE);
     }
 
     private void initAction() {
@@ -70,11 +90,17 @@ public class MainActivity extends AppCompatActivity {
 
         binding.layoutRegister.btnRegister.setOnClickListener(v -> registerUser());
         binding.loginLayout.btnLogin.setOnClickListener(v -> loginUser());
+        binding.loginLayout.btnLoginWithPhone.setOnClickListener(v -> showPhoneInputDialog());
+
         binding.layoutForgotpassword.btnContinue.setOnClickListener(v -> sendPasswordReset());
         binding.layoutForgotpassword.btnBackToLogin.setOnClickListener(v -> showLogin(false));
 
         binding.layoutSignupSuccess.btnBackToLogin.setOnClickListener(v -> showLogin(true));
         binding.layoutSignupSuccess.btnOpenGmail.setOnClickListener(v -> openGmailApp());
+        
+        setupOtpInputs();
+        binding.layoutOtp.btnVerifyOtp.setOnClickListener(v -> verifyOtp());
+        binding.layoutOtp.tvResendOtp.setOnClickListener(v -> resendOtp());
     }
 
     private void openGmailApp() {
@@ -248,6 +274,7 @@ public class MainActivity extends AppCompatActivity {
         hide(binding.loginLayout.getRoot(), !forward);
         hide(binding.layoutForgotpassword.getRoot(), !forward);
         hide(binding.layoutSignupSuccess.getRoot(), !forward);
+        hide(binding.layoutOtp.getRoot(), !forward);
     }
 
     private void showLogin(boolean forward) {
@@ -255,6 +282,7 @@ public class MainActivity extends AppCompatActivity {
         hide(binding.layoutRegister.getRoot(), !forward);
         hide(binding.layoutForgotpassword.getRoot(), !forward);
         hide(binding.layoutSignupSuccess.getRoot(), !forward);
+        hide(binding.layoutOtp.getRoot(), !forward);
     }
 
     private void showForgot(boolean forward) {
@@ -262,6 +290,7 @@ public class MainActivity extends AppCompatActivity {
         hide(binding.loginLayout.getRoot(), !forward);
         hide(binding.layoutRegister.getRoot(), !forward);
         hide(binding.layoutSignupSuccess.getRoot(), !forward);
+        hide(binding.layoutOtp.getRoot(), !forward);
     }
 
     private void showSignupSuccess(boolean forward) {
@@ -269,6 +298,15 @@ public class MainActivity extends AppCompatActivity {
         hide(binding.loginLayout.getRoot(), !forward);
         hide(binding.layoutRegister.getRoot(), !forward);
         hide(binding.layoutForgotpassword.getRoot(), !forward);
+        hide(binding.layoutOtp.getRoot(), !forward);
+    }
+    
+    private void showOtpLayout(boolean forward) {
+        show(binding.layoutOtp.getRoot(), forward);
+        hide(binding.loginLayout.getRoot(), !forward);
+        hide(binding.layoutRegister.getRoot(), !forward);
+        hide(binding.layoutForgotpassword.getRoot(), !forward);
+        hide(binding.layoutSignupSuccess.getRoot(), !forward);
     }
 
     private int getWidth() {
@@ -276,6 +314,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void show(View v, boolean forward) {
+        if (v == null || v.getVisibility() == View.VISIBLE) return;
         v.bringToFront();
         v.setVisibility(View.VISIBLE);
         v.setTranslationX(forward ? getWidth() : -getWidth());
@@ -286,5 +325,205 @@ public class MainActivity extends AppCompatActivity {
     private void hide(View v, boolean forward) {
         if (v == null || v.getVisibility() != View.VISIBLE) return;
         v.animate().translationX(forward ? getWidth() : -getWidth()).alpha(0f).setDuration(ANIM_DURATION).setInterpolator(new DecelerateInterpolator()).withEndAction(() -> v.setVisibility(View.GONE)).start();
+    }
+    
+    // ================== LOGIC OTP ==================
+    
+    private void showPhoneInputDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Đăng nhập bằng Số điện thoại");
+        builder.setMessage("Nhập số điện thoại (ví dụ: 0912345678)");
+
+        final EditText input = new EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        input.setPadding(50, 40, 50, 40);
+        builder.setView(input);
+
+        builder.setPositiveButton("Gửi mã OTP", (dialog, which) -> {
+            String phone = input.getText().toString().trim();
+            if (phone.isEmpty() || phone.length() < 9) {
+                Toast.makeText(this, "Số điện thoại không hợp lệ", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            pendingPhoneNumber = phone;
+            binding.layoutOtp.tvOtpInstruction.setText("Nhập mã OTP đã được gửi tới số điện thoại: " + phone);
+            showOtpLayout(true);
+            sendVerificationCode(phone);
+        });
+        builder.setNegativeButton("Hủy", (dialog, which) -> dialog.cancel());
+        builder.show();
+    }
+    
+    private void sendVerificationCode(String phone) {
+        startTimer();
+        String formattedPhone = formatPhoneNumber(phone);
+        
+        PhoneAuthOptions options = PhoneAuthOptions.newBuilder(mAuth)
+                .setPhoneNumber(formattedPhone)
+                .setTimeout(60L, TimeUnit.SECONDS)
+                .setActivity(this)
+                .setCallbacks(mCallbacks)
+                .build();
+        PhoneAuthProvider.verifyPhoneNumber(options);
+    }
+    
+    private String formatPhoneNumber(String phone) {
+        if (phone.startsWith("0")) return "+84" + phone.substring(1);
+        if (!phone.startsWith("+")) return "+84" + phone;
+        return phone;
+    }
+    
+    private PhoneAuthProvider.OnVerificationStateChangedCallbacks mCallbacks = new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+        @Override
+        public void onVerificationCompleted(@NonNull PhoneAuthCredential credential) {
+            String code = credential.getSmsCode();
+            if (code != null) {
+                fillOtpCode(code);
+                verifyOtp(code);
+            } else {
+                signInWithPhoneAuthCredential(credential);
+            }
+        }
+        @Override
+        public void onVerificationFailed(@NonNull FirebaseException e) {
+            Toast.makeText(MainActivity.this, "Gửi mã thất bại: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            binding.layoutOtp.tvCountdown.setVisibility(View.GONE);
+            binding.layoutOtp.tvResendOtp.setVisibility(View.VISIBLE);
+        }
+        @Override
+        public void onCodeSent(@NonNull String verificationId, @NonNull PhoneAuthProvider.ForceResendingToken token) {
+            mVerificationId = verificationId;
+            mResendToken = token;
+            NotificationHelper.showSuccess(binding.getRoot(), "Mã OTP đã được gửi!");
+        }
+    };
+    
+    private void verifyOtp() {
+        String code = binding.layoutOtp.edtOtp1.getText().toString() +
+                binding.layoutOtp.edtOtp2.getText().toString() +
+                binding.layoutOtp.edtOtp3.getText().toString() +
+                binding.layoutOtp.edtOtp4.getText().toString() +
+                binding.layoutOtp.edtOtp5.getText().toString() +
+                binding.layoutOtp.edtOtp6.getText().toString();
+
+        if (code.length() < 6) {
+            Toast.makeText(this, "Vui lòng nhập đủ 6 số", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        binding.layoutOtp.btnVerifyOtp.setEnabled(false);
+        binding.layoutOtp.btnVerifyOtp.setText("Đang xác thực...");
+        verifyOtp(code);
+    }
+
+    private void verifyOtp(String code) {
+        if (mVerificationId == null) {
+            Toast.makeText(this, "Lỗi, vui lòng gửi lại mã", Toast.LENGTH_SHORT).show();
+            resetOtpButton();
+            return;
+        }
+        PhoneAuthCredential credential = PhoneAuthProvider.getCredential(mVerificationId, code);
+        signInWithPhoneAuthCredential(credential);
+    }
+
+    private void signInWithPhoneAuthCredential(PhoneAuthCredential credential) {
+        mAuth.signInWithCredential(credential)
+            .addOnCompleteListener(this, task -> {
+                if (task.isSuccessful()) {
+                    checkAndCreateUserIfPhoneNew();
+                } else {
+                    resetOtpButton();
+                    Toast.makeText(this, "Mã OTP không đúng", Toast.LENGTH_LONG).show();
+                }
+            });
+    }
+    
+    private void checkAndCreateUserIfPhoneNew() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) return;
+        
+        mDatabase.child("users").child(user.getUid()).get().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult().exists()) {
+                navigateToDashboard(); 
+            } else {
+                User newUser = new User("Người dùng Hệ thống", user.getPhoneNumber(), user.getPhoneNumber(), null, null);
+                mDatabase.child("users").child(user.getUid()).setValue(newUser)
+                    .addOnCompleteListener(t -> navigateToDashboard());
+            }
+        });
+    }
+
+    private void resetOtpButton() {
+        binding.layoutOtp.btnVerifyOtp.setEnabled(true);
+        binding.layoutOtp.btnVerifyOtp.setText("Xác thực");
+    }
+
+    private void resendOtp() {
+        if (pendingPhoneNumber != null) {
+            sendVerificationCode(pendingPhoneNumber);
+        }
+    }
+
+    private void startTimer() {
+        binding.layoutOtp.tvResendOtp.setVisibility(View.GONE);
+        binding.layoutOtp.tvCountdown.setVisibility(View.VISIBLE);
+        if (countDownTimer != null) countDownTimer.cancel();
+        
+        countDownTimer = new CountDownTimer(60000, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                int sec = (int) (millisUntilFinished / 1000);
+                binding.layoutOtp.tvCountdown.setText(String.format("Gửi lại mã sau %02ds", sec));
+            }
+            @Override
+            public void onFinish() {
+                binding.layoutOtp.tvCountdown.setVisibility(View.GONE);
+                binding.layoutOtp.tvResendOtp.setVisibility(View.VISIBLE);
+            }
+        }.start();
+    }
+    
+    private void fillOtpCode(String code) {
+        if (code.length() >= 6) {
+             binding.layoutOtp.edtOtp1.setText(String.valueOf(code.charAt(0)));
+             binding.layoutOtp.edtOtp2.setText(String.valueOf(code.charAt(1)));
+             binding.layoutOtp.edtOtp3.setText(String.valueOf(code.charAt(2)));
+             binding.layoutOtp.edtOtp4.setText(String.valueOf(code.charAt(3)));
+             binding.layoutOtp.edtOtp5.setText(String.valueOf(code.charAt(4)));
+             binding.layoutOtp.edtOtp6.setText(String.valueOf(code.charAt(5)));
+        }
+    }
+    
+    private void setupOtpInputs() {
+        EditText[] editTexts = {
+                binding.layoutOtp.edtOtp1, binding.layoutOtp.edtOtp2, binding.layoutOtp.edtOtp3,
+                binding.layoutOtp.edtOtp4, binding.layoutOtp.edtOtp5, binding.layoutOtp.edtOtp6
+        };
+
+        for (int i = 0; i < editTexts.length; i++) {
+            final int index = i;
+            editTexts[i].addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    if (s.length() == 1 && index < editTexts.length - 1) {
+                        editTexts[index + 1].requestFocus();
+                    } else if (s.length() == 0 && index > 0) {
+                        editTexts[index - 1].requestFocus();
+                    }
+                }
+                @Override public void afterTextChanged(Editable s) {}
+            });
+            
+            editTexts[i].setOnKeyListener((v, keyCode, event) -> {
+                if (keyCode == KeyEvent.KEYCODE_DEL && event.getAction() == KeyEvent.ACTION_DOWN) {
+                    if (editTexts[index].getText().toString().isEmpty() && index > 0) {
+                        editTexts[index - 1].requestFocus();
+                        editTexts[index - 1].setText(""); 
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
     }
 }

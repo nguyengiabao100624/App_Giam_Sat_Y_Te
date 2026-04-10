@@ -34,11 +34,12 @@ public class NotificationsFragment extends Fragment implements NotificationsAdap
 
     private FragmentNotificationsBinding binding;
     private NotificationsAdapter adapter;
-    private List<Notification> allNotifications = new ArrayList<>();
-    private List<Notification> displayedNotifications = new ArrayList<>();
+    private final List<Notification> allNotifications = new ArrayList<>();
+    private final List<Notification> displayedNotifications = new ArrayList<>();
     
     private DatabaseReference notificationRef;
     private FirebaseAuth mAuth;
+    private ValueEventListener notificationListener;
 
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentNotificationsBinding.inflate(inflater, container, false);
@@ -60,54 +61,75 @@ public class NotificationsFragment extends Fragment implements NotificationsAdap
         setupListeners();
         
         if (mAuth.getCurrentUser() != null) {
+            // Đảm bảo URL Database đồng bộ
             FirebaseDatabase db = FirebaseDatabase.getInstance("https://cssuckhoe-default-rtdb.asia-southeast1.firebasedatabase.app/");
             notificationRef = db.getReference().child("notifications").child(mAuth.getCurrentUser().getUid());
             loadNotificationsFromFirebase();
         } else {
-            binding.tvNoNotifications.setVisibility(View.VISIBLE);
-            binding.tvNoNotifications.setText("Vui lòng đăng nhập để xem thông báo");
+            if (binding != null) {
+                binding.tvNoNotifications.setVisibility(View.VISIBLE);
+                binding.tvNoNotifications.setText("Vui lòng đăng nhập để xem thông báo");
+            }
         }
     }
 
     private void setupRecyclerView() {
         binding.rvNotifications.setLayoutManager(new LinearLayoutManager(getContext()));
+        // Sử dụng danh sách displayedNotifications để Adapter tham chiếu
         adapter = new NotificationsAdapter(displayedNotifications, this);
         binding.rvNotifications.setAdapter(adapter);
     }
 
     private void loadNotificationsFromFirebase() {
-        notificationRef.addValueEventListener(new ValueEventListener() {
+        if (notificationRef == null) return;
+        
+        notificationListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (binding == null) return;
-                allNotifications.clear();
+                
+                List<Notification> tempAll = new ArrayList<>();
                 for (DataSnapshot postSnapshot : snapshot.getChildren()) {
                     try {
                         Notification notification = postSnapshot.getValue(Notification.class);
                         if (notification != null) {
                             if (notification.getId() == null) notification.setId(postSnapshot.getKey());
-                            allNotifications.add(notification);
+                            tempAll.add(notification);
                         }
                     } catch (Exception e) {
                         Log.e("Firebase", "Bỏ qua bản ghi lỗi: " + postSnapshot.getKey());
                     }
                 }
-                Collections.sort(allNotifications, (n1, n2) -> Long.compare(n2.getTimestamp(), n1.getTimestamp()));
-                filterNotifications(binding.chipGroupFilters.getCheckedChipId());
+                
+                // Sắp xếp trên danh sách tạm
+                Collections.sort(tempAll, (n1, n2) -> Long.compare(n2.getTimestamp(), n1.getTimestamp()));
+                
+                // Cập nhật allNotifications an toàn
+                synchronized (allNotifications) {
+                    allNotifications.clear();
+                    allNotifications.addAll(tempAll);
+                }
+                
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> filterNotifications(binding.chipGroupFilters.getCheckedChipId()));
+                }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
                 Log.e("Firebase", "Lỗi: " + error.getMessage());
             }
-        });
+        };
+        notificationRef.addValueEventListener(notificationListener);
     }
 
     private void setupListeners() {
         binding.tvMarkReadAll.setOnClickListener(v -> {
             if (notificationRef != null && !allNotifications.isEmpty()) {
-                for (Notification n : allNotifications) {
-                    if (!n.isRead()) notificationRef.child(n.getId()).child("read").setValue(true);
+                synchronized (allNotifications) {
+                    for (Notification n : allNotifications) {
+                        if (!n.isRead()) notificationRef.child(n.getId()).child("read").setValue(true);
+                    }
                 }
                 Toast.makeText(getContext(), "Đã đánh dấu tất cả là đã đọc", Toast.LENGTH_SHORT).show();
             }
@@ -120,7 +142,7 @@ public class NotificationsFragment extends Fragment implements NotificationsAdap
                         .setMessage("Bạn có chắc chắn muốn xóa tất cả thông báo không?")
                         .setPositiveButton("Xóa", (dialog, which) -> {
                             notificationRef.removeValue().addOnSuccessListener(aVoid -> {
-                                Toast.makeText(getContext(), "Đã xóa tất cả thông báo", Toast.LENGTH_SHORT).show();
+                                if (getContext() != null) Toast.makeText(getContext(), "Đã xóa tất cả thông báo", Toast.LENGTH_SHORT).show();
                             });
                         })
                         .setNegativeButton("Hủy", null)
@@ -134,78 +156,73 @@ public class NotificationsFragment extends Fragment implements NotificationsAdap
     }
 
     private void filterNotifications(int chipId) {
-        displayedNotifications.clear();
-        if (chipId == R.id.chip_all || chipId == View.NO_ID) {
-            displayedNotifications.addAll(allNotifications);
-        } else if (chipId == R.id.chip_heart_rate) {
-            for (Notification n : allNotifications) {
-                String t = n.getTitle() != null ? n.getTitle().toLowerCase() : "";
-                if (t.contains("nhịp tim") || t.contains("heart rate")) displayedNotifications.add(n);
-            }
-        } else if (chipId == R.id.chip_spo2) {
-            for (Notification n : allNotifications) {
-                String t = n.getTitle() != null ? n.getTitle().toLowerCase() : "";
-                if (t.contains("oxy") || t.contains("spo2")) displayedNotifications.add(n);
-            }
-        } else if (chipId == R.id.chip_temperature) {
-            for (Notification n : allNotifications) {
-                String t = n.getTitle() != null ? n.getTitle().toLowerCase() : "";
-                String m = n.getMessage() != null ? n.getMessage().toLowerCase() : "";
-                if (t.contains("nhiệt độ") || t.contains("thân nhiệt") || t.contains("nhiệt") || m.contains("nhiệt độ") || m.contains("sốt")) {
-                    displayedNotifications.add(n);
+        if (binding == null) return;
+        
+        List<Notification> filtered = new ArrayList<>();
+        synchronized (allNotifications) {
+            if (chipId == R.id.chip_all || chipId == View.NO_ID) {
+                filtered.addAll(allNotifications);
+            } else {
+                for (Notification n : allNotifications) {
+                    String t = n.getTitle() != null ? n.getTitle().toLowerCase() : "";
+                    String m = n.getMessage() != null ? n.getMessage().toLowerCase() : "";
+                    
+                    if (chipId == R.id.chip_heart_rate && (t.contains("nhịp tim") || t.contains("heart rate"))) {
+                        filtered.add(n);
+                    } else if (chipId == R.id.chip_spo2 && (t.contains("oxy") || t.contains("spo2"))) {
+                        filtered.add(n);
+                    } else if (chipId == R.id.chip_temperature && (t.contains("nhiệt độ") || t.contains("thân nhiệt") || t.contains("nhiệt") || m.contains("sốt"))) {
+                        filtered.add(n);
+                    } else if (chipId == R.id.chip_dust && (t.contains("bụi") || t.contains("không khí") || t.contains("dust") || m.contains("ô nhiễm"))) {
+                        filtered.add(n);
+                    } else if (chipId == R.id.chip_fall && (t.contains("ngã") || t.contains("té") || t.contains("fall") || t.contains("sos"))) {
+                        filtered.add(n);
+                    }
                 }
-            }
-        } else if (chipId == R.id.chip_dust) {
-            for (Notification n : allNotifications) {
-                String t = n.getTitle() != null ? n.getTitle().toLowerCase() : "";
-                String m = n.getMessage() != null ? n.getMessage().toLowerCase() : "";
-                if (t.contains("bụi") || t.contains("không khí") || t.contains("dust") || m.contains("bụi") || m.contains("ô nhiễm")) {
-                    displayedNotifications.add(n);
-                }
-            }
-        } else if (chipId == R.id.chip_fall) {
-            for (Notification n : allNotifications) {
-                String t = n.getTitle() != null ? n.getTitle().toLowerCase() : "";
-                if (t.contains("ngã") || t.contains("té") || t.contains("fall") || t.contains("sos")) displayedNotifications.add(n);
             }
         }
         
+        // Cập nhật danh sách hiển thị an toàn cho Adapter
+        displayedNotifications.clear();
+        displayedNotifications.addAll(filtered);
         adapter.notifyDataSetChanged();
+        
         binding.rvNotifications.setVisibility(displayedNotifications.isEmpty() ? View.GONE : View.VISIBLE);
         binding.tvNoNotifications.setVisibility(displayedNotifications.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
     @Override
     public void onNotificationClick(Notification notification, int position) {
+        if (notification == null) return;
+        
         if (notificationRef != null && !notification.isRead()) {
             notificationRef.child(notification.getId()).child("read").setValue(true);
         }
-        if (notification != null) {
-            try {
-                NavController navController = Navigation.findNavController(requireView());
-                if (navController.getCurrentDestination() != null && 
-                    navController.getCurrentDestination().getId() == R.id.navigation_notifications) {
-                    
-                    Bundle args = new Bundle();
-                    args.putSerializable("notification", notification);
-                    navController.navigate(R.id.action_notifications_to_detail, args);
-                }
-            } catch (Exception e) {
-                Log.e("Notif", "Lỗi điều hướng: " + e.getMessage());
+        
+        try {
+            NavController navController = Navigation.findNavController(requireView());
+            if (navController.getCurrentDestination() != null && 
+                navController.getCurrentDestination().getId() == R.id.navigation_notifications) {
+                
+                Bundle args = new Bundle();
+                args.putSerializable("notification", notification);
+                navController.navigate(R.id.action_notifications_to_detail, args);
             }
+        } catch (Exception e) {
+            Log.e("Notif", "Lỗi điều hướng: " + e.getMessage());
         }
     }
 
     @Override
     public void onNotificationLongClick(Notification notification, int position) {
+        if (notification == null || notification.getId() == null) return;
+        
         new AlertDialog.Builder(getContext())
                 .setTitle("Xóa thông báo")
                 .setMessage("Bạn có muốn xóa thông báo này không?")
                 .setPositiveButton("Xóa", (dialog, which) -> {
-                    if (notificationRef != null && notification.getId() != null) {
-                        notificationRef.child(notification.getId()).removeValue().addOnSuccessListener(aVoid -> {
-                            Toast.makeText(getContext(), "Đã xóa thông báo", Toast.LENGTH_SHORT).show();
-                        });
+                    if (notificationRef != null) {
+                        notificationRef.child(notification.getId()).removeValue();
                     }
                 })
                 .setNegativeButton("Hủy", null)
@@ -214,6 +231,9 @@ public class NotificationsFragment extends Fragment implements NotificationsAdap
 
     @Override
     public void onDestroyView() {
+        if (notificationRef != null && notificationListener != null) {
+            notificationRef.removeEventListener(notificationListener);
+        }
         super.onDestroyView();
         binding = null;
     }

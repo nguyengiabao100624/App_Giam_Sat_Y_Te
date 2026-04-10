@@ -189,7 +189,7 @@ public class OtpFragment extends Fragment {
         PhoneAuthOptions.Builder optionsBuilder = PhoneAuthOptions.newBuilder(mAuth)
                 .setPhoneNumber(formattedPhone)
                 .setTimeout(60L, TimeUnit.SECONDS)
-                .setActivity(getActivity()) 
+                .setActivity(requireActivity()) 
                 .setCallbacks(mCallbacks);
 
         if (mResendToken != null) {
