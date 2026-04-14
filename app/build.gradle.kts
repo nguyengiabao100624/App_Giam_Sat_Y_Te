@@ -28,6 +28,7 @@ android {
 
         // 1. Expose Gemini Key to Java/Kotlin code
         buildConfigField("String", "GEMINI_API_KEY", "\"${localProperties.getProperty("GEMINI_API_KEY") ?: ""}\"")
+        buildConfigField("String", "DATABASE_URL", "\"https://cssuckhoe-default-rtdb.asia-southeast1.firebasedatabase.app\"")
         
         // 2. Inject Maps Key into AndroidManifest.xml
         manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY") ?: ""

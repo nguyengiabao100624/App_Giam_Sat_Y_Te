@@ -39,7 +39,6 @@ import com.example.loginanimatedapp.adapter.ChatAdapter;
 import com.example.loginanimatedapp.databinding.FragmentChatBinding;
 import com.example.loginanimatedapp.model.ChatMessage;
 import com.example.loginanimatedapp.ui.dashboard.DashboardViewModel;
-import com.example.loginanimatedapp.utils.AppConstants;
 
 import com.google.ai.client.generativeai.GenerativeModel;
 import com.google.ai.client.generativeai.java.ChatFutures;
@@ -187,7 +186,7 @@ public class ChatFragment extends Fragment {
     }
 
     private void loadHistoryForAI() {
-        FirebaseDatabase.getInstance(AppConstants.DATABASE_URL).getReference("History")
+        FirebaseDatabase.getInstance(BuildConfig.DATABASE_URL).getReference("History")
                 .limitToLast(50)
                 .addValueEventListener(new ValueEventListener() {
                     @Override
@@ -438,7 +437,7 @@ public class ChatFragment extends Fragment {
             Content systemInstruction = builder.build();
 
             GenerativeModel gm = new GenerativeModel(
-                "gemini-3.1-flash-lite-preview",
+                "gemini-2.5-flash-lite",
                 apiKey.trim(),
                 new GenerationConfig.Builder().build(),
                 null, 

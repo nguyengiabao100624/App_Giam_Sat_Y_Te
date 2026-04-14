@@ -64,6 +64,21 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <!-- Nút Hủy Báo Động (Ẩn mặc định) -->
+        <Button
+            android:id="@+id/btn_cancel_alert"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginBottom="20dp"
+            android:text="HỦY BÁO ĐỘNG"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:backgroundTint="#D32F2F"
+            app:cornerRadius="12dp"
+            android:visibility="gone"
+            android:elevation="8dp"/>
+
         <GridLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

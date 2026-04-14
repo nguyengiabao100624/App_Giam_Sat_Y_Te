@@ -16,6 +16,7 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.example.loginanimatedapp.BuildConfig;
 import com.example.loginanimatedapp.R;
 import com.example.loginanimatedapp.databinding.FragmentNotificationsBinding;
 import com.example.loginanimatedapp.model.Notification;
@@ -62,7 +63,7 @@ public class NotificationsFragment extends Fragment implements NotificationsAdap
         
         if (mAuth.getCurrentUser() != null) {
             // Đảm bảo URL Database đồng bộ
-            FirebaseDatabase db = FirebaseDatabase.getInstance("https://cssuckhoe-default-rtdb.asia-southeast1.firebasedatabase.app/");
+            FirebaseDatabase db = FirebaseDatabase.getInstance(BuildConfig.DATABASE_URL);
             notificationRef = db.getReference().child("notifications").child(mAuth.getCurrentUser().getUid());
             loadNotificationsFromFirebase();
         } else {

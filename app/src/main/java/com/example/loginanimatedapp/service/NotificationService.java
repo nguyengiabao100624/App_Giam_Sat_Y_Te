@@ -21,10 +21,10 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
+import com.example.loginanimatedapp.BuildConfig;
 import com.example.loginanimatedapp.DashboardActivity;
 import com.example.loginanimatedapp.R;
 import com.example.loginanimatedapp.model.Notification;
-import com.example.loginanimatedapp.utils.AppConstants;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -80,7 +80,7 @@ public class NotificationService extends Service {
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         String deviceId = prefs.getString("connected_device_id", "");
         if (deviceId.isEmpty()) return;
-        deviceRef = FirebaseDatabase.getInstance(AppConstants.DATABASE_URL).getReference("Devices").child(deviceId);
+        deviceRef = FirebaseDatabase.getInstance(BuildConfig.DATABASE_URL).getReference("Devices").child(deviceId);
         deviceListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -141,7 +141,7 @@ public class NotificationService extends Service {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return;
 
-        DatabaseReference notifRef = FirebaseDatabase.getInstance(AppConstants.DATABASE_URL).getReference("notifications").child(uid);
+        DatabaseReference notifRef = FirebaseDatabase.getInstance(BuildConfig.DATABASE_URL).getReference("notifications").child(uid);
         String id = notifRef.push().getKey();
         Notification n = new Notification(id, title, content, System.currentTimeMillis(), iconRes, value);
         if (id != null) {
