@@ -197,6 +197,10 @@ public class NotificationService extends Service {
         if (lower.contains("oxy") || lower.contains("spo2")) return "Nồng độ Oxy trong máu (SpO2) đang ở mức thấp.";
         if (lower.contains("sot") || (lower.contains("nhiet do") && lower.contains("cao"))) return "Nhiệt độ cơ thể cao, phát hiện dấu hiệu sốt.";
         if (lower.contains("nhiet do") && lower.contains("thap")) return "Nhiệt độ cơ thể đang xuống mức thấp.";
+        if (lower.contains("khong tim thay mach")) return "Báo động: Không tìm thấy mạch đập!";
+        if (lower.contains("mat mach khi do lien tuc")) return "Báo động: Mất mạch khi đang đo liên tục!";
+        if (lower.contains("ngat xiu")) return "Nguy kịch: Ngất xỉu sau ngã!";
+        if (lower.contains("suy ho hap")) return "Báo động: Suy hô hấp do ô nhiễm!";
         
         return raw.replace("Nhiet do", "Nhiệt độ")
                   .replace("nhiet do", "nhiệt độ")

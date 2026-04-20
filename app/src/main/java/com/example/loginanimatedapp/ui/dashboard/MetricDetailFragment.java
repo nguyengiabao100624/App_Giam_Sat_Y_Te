@@ -1,14 +1,24 @@
 package com.example.loginanimatedapp.ui.dashboard;
 
+import android.animation.PropertyValuesHolder;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.text.Html;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -65,7 +75,8 @@ public class MetricDetailFragment extends Fragment {
     private float totalSum = 0f;
     private int validDataCount = 0;
     private int graphXIndex = 0;
-    private GenerateAdviceTask currentAiTask = null; // Quản lý task AI để tránh văng App
+    private float currentValue = -1f; 
+    private GenerateAdviceTask currentAiTask = null; 
 
     private String highestTime = "";
     private String lowestTime = "";
@@ -120,7 +131,6 @@ public class MetricDetailFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
-        // HỦY TASK AI KHI THOÁT MÀN HÌNH ĐỂ TRÁNH CRASH
         if (currentAiTask != null) {
             currentAiTask.cancel(true);
             currentAiTask = null;
@@ -130,55 +140,176 @@ public class MetricDetailFragment extends Fragment {
     }
 
     private void exportPDF() {
-        if (validDataCount == 0 || binding == null) {
-            Toast.makeText(getContext(), "Không có dữ liệu để xuất PDF!", Toast.LENGTH_SHORT).show();
+        Context context = getContext();
+        if (context == null || validDataCount == 0 || binding == null) {
+            Toast.makeText(context != null ? context : getActivity(), "Không có dữ liệu để xuất PDF!", Toast.LENGTH_SHORT).show();
             return;
         }
 
         try {
             PdfDocument pdfDocument = new PdfDocument();
-            Paint paint = new Paint();
             PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
             PdfDocument.Page page = pdfDocument.startPage(pageInfo);
             Canvas canvas = page.getCanvas();
 
-            paint.setTextSize(24f);
-            paint.setFakeBoldText(true);
-            canvas.drawText("BÁO CÁO Y TẾ - " + displayTitle.toUpperCase(), 50, 80, paint);
+            Paint paint = new Paint();
+            paint.setAntiAlias(true);
+            TextPaint textPaint = new TextPaint();
+            textPaint.setAntiAlias(true);
+
+            int margin = 50;
+            int pageWidth = pageInfo.getPageWidth();
+            int currentY = 0;
+
+            paint.setColor(Color.parseColor("#1976D2")); 
+            canvas.drawRect(0, 0, pageWidth, 100, paint);
+
+            paint.setColor(Color.WHITE);
+            paint.setTextSize(20f);
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            canvas.drawText("HEALTHY 365", margin, 45, paint);
+            
+            paint.setTextSize(12f);
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+            canvas.drawText("Hệ Thống Giám Sát Sức Khỏe Thông Minh", margin, 70, paint);
 
             paint.setTextSize(16f);
-            paint.setFakeBoldText(false);
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault());
-            canvas.drawText("Ngày xuất: " + sdf.format(new Date()), 50, 120, paint);
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            String reportTitle = "BÁO CÁO: " + displayTitle.toUpperCase();
+            canvas.drawText(reportTitle, pageWidth - margin - paint.measureText(reportTitle), 60, paint);
 
-            String format = "temperature".equals(metricType) ? "%.1f" : "%.0f";
+            currentY = 140;
+
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(13f);
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            canvas.drawText("THÔNG TIN TỔNG QUAN", margin, currentY, paint);
+            
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+            paint.setTextSize(11f);
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy", Locale.getDefault());
+            canvas.drawText("Thời gian xuất: " + sdf.format(new Date()), margin, currentY + 20, paint);
+            
+            SharedPreferences prefs = context.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
+            String deviceId = prefs.getString("connected_device_id", "Chưa xác định");
+            canvas.drawText("Mã thiết bị: " + deviceId, margin, currentY + 35, paint);
+
+            int statusLevel = getStatusLevel(currentValue);
+            String statusText = "BÌNH THƯỜNG";
+            int statusColor = Color.parseColor("#4CAF50");
+            if (statusLevel == 1) { statusText = "CẢNH BÁO"; statusColor = Color.parseColor("#FB8C00"); }
+            else if (statusLevel == 2) { statusText = "NGUY HIỂM"; statusColor = Color.RED; }
+            
+            paint.setColor(statusColor);
+            Rect statusRect = new Rect(pageWidth - margin - 120, currentY - 5, pageWidth - margin, currentY + 25);
+            canvas.drawRoundRect(statusRect.left, statusRect.top, statusRect.right, statusRect.bottom, 8, 8, paint);
+            
+            paint.setColor(Color.WHITE);
+            paint.setTextSize(11f);
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            float statusWidth = paint.measureText(statusText);
+            canvas.drawText(statusText, statusRect.centerX() - (statusWidth / 2), statusRect.centerY() + 4, paint);
+
+            currentY += 70;
+
+            paint.setColor(Color.parseColor("#F5F5F5"));
+            canvas.drawRoundRect(margin, currentY, pageWidth - margin, currentY + 90, 10, 10, paint);
+            
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(12f);
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            canvas.drawText("TÓM TẮT CHỈ SỐ LÂM SÀNG (7 NGÀY)", margin + 15, currentY + 25, paint);
+            
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
             String unit = getUnit();
+            String format = "temperature".equals(metricType) ? "%.1f" : "%.0f";
+            
+            canvas.drawText("Trung bình: " + String.format(format, totalSum / validDataCount) + " " + unit, margin + 20, currentY + 55, paint);
+            canvas.drawText("Cao nhất: " + String.format(format, highestValue) + " " + unit, margin + 180, currentY + 55, paint);
+            canvas.drawText("Thấp nhất: " + String.format(format, lowestValue) + " " + unit, margin + 340, currentY + 55, paint);
 
-            canvas.drawText("Chi tiết thống kê:", 50, 170, paint);
-            canvas.drawText("- Giá trị cao nhất: " + String.format(format, highestValue) + " " + unit, 70, 210, paint);
-            canvas.drawText("- Giá trị thấp nhất: " + String.format(format, lowestValue) + " " + unit, 70, 250, paint);
-            canvas.drawText("- Giá trị trung bình: " + String.format(format, totalSum / validDataCount) + " " + unit, 70, 290, paint);
+            currentY += 120;
+
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            canvas.drawText("BIỂU ĐỒ XU HƯỚNG LÂM SÀNG", margin, currentY, paint);
+            currentY += 15;
+            if (binding.chartHistory.getWidth() > 0) {
+                Bitmap chartBitmap = binding.chartHistory.getChartBitmap();
+                Rect destRect = new Rect(margin, currentY, pageWidth - margin, currentY + 180);
+                canvas.drawBitmap(chartBitmap, null, destRect, null);
+                currentY += 200;
+            }
+
+            CharSequence adviceText = binding.tvAdvice.getText();
+            if (adviceText == null || adviceText.length() == 0 || adviceText.toString().contains("AI đang phân tích")) {
+                adviceText = "Hệ thống AI đang tổng hợp dữ liệu, vui lòng tham khảo ý kiến bác sĩ trực tiếp.";
+            }
+
+            textPaint.setTextSize(12f);
+            textPaint.setColor(Color.parseColor("#333333"));
+            int textWidth = pageWidth - (margin * 2) - 30;
+            
+            StaticLayout sl;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                sl = StaticLayout.Builder.obtain(adviceText, 0, adviceText.length(), textPaint, textWidth)
+                        .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                        .setLineSpacing(0.0f, 1.2f)
+                        .build();
+            } else {
+                sl = new StaticLayout(adviceText, textPaint, textWidth, Layout.Alignment.ALIGN_NORMAL, 1.2f, 0.0f, false);
+            }
+
+            int aiBoxHeight = sl.getHeight() + 65;
+            paint.setColor(Color.parseColor("#FFF8E1")); 
+            canvas.drawRoundRect(margin, currentY, pageWidth - margin, currentY + aiBoxHeight, 10, 10, paint);
+            
+            paint.setColor(Color.parseColor("#FF8F00")); 
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            canvas.drawText("PHÂN TÍCH CHUYÊN SÂU TỪ AI", margin + 15, currentY + 25, paint);
+            
+            canvas.save();
+            canvas.translate(margin + 15, currentY + 45);
+            sl.draw(canvas);
+            canvas.restore();
+            
+            currentY += aiBoxHeight + 35;
+
+            if (currentY > 730) currentY = 730; 
+            
+            paint.setColor(Color.LTGRAY);
+            paint.setStrokeWidth(1f);
+            canvas.drawLine(margin, currentY, pageWidth - margin, currentY, paint);
+            
+            currentY += 25;
+            paint.setColor(Color.GRAY);
+            paint.setTextSize(9f);
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.ITALIC));
+            canvas.drawText("* Báo cáo tự động từ hệ thống Healthy 365. Kết quả chỉ mang tính chất tham khảo lâm sàng.", margin, currentY, paint);
+            
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(12f);
+            paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            canvas.drawText("Xác nhận chuyên môn", pageWidth - margin - 155, currentY + 40, paint);
+            canvas.drawText("___________________", pageWidth - margin - 155, currentY + 75, paint);
 
             pdfDocument.finishPage(page);
 
-            File pdfDir = new File(requireContext().getCacheDir(), "pdfs");
+            File pdfDir = new File(context.getCacheDir(), "pdfs");
             if (!pdfDir.exists()) pdfDir.mkdirs();
-            
-            File pdfFile = new File(pdfDir, "BaoCao_" + metricType + "_" + System.currentTimeMillis() + ".pdf");
+            File pdfFile = new File(pdfDir, "MedicalReport_" + metricType + "_" + System.currentTimeMillis() + ".pdf");
             pdfDocument.writeTo(new FileOutputStream(pdfFile));
             pdfDocument.close();
 
-            Uri pdfUri = FileProvider.getUriForFile(requireContext(), requireContext().getPackageName() + ".provider", pdfFile);
-
+            Uri pdfUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", pdfFile);
             Intent shareIntent = new Intent(Intent.ACTION_SEND);
             shareIntent.setType("application/pdf");
             shareIntent.putExtra(Intent.EXTRA_STREAM, pdfUri);
             shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivity(Intent.createChooser(shareIntent, "Chia sẻ báo cáo PDF"));
+            startActivity(Intent.createChooser(shareIntent, "Gửi báo cáo y khoa PDF"));
 
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(getContext(), "Lỗi khi tạo PDF: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Lỗi khi xuất PDF: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -254,12 +385,10 @@ public class MetricDetailFragment extends Fragment {
                 int normalCount = 0; int warningCount = 0; int criticalCount = 0;
 
                 long sevenDaysAgo = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000;
-                // Sửa format ngày để khớp với dữ liệu từ thiết bị (HH:mm:ss dd/MM/yyyy)
                 SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss dd/MM/yyyy", Locale.getDefault());
                 List<DataSnapshot> validNodes = new ArrayList<>();
 
                 for (DataSnapshot child : snapshot.getChildren()) {
-                    // XÓA BỎ LỌC 'Do lien tuc' để lấy toàn bộ lịch sử đo (bao gồm cả đo snapshot)
                     Object tObj = child.child("ThoiGian").getValue();
                     if (tObj == null) continue;
                     try {
@@ -304,9 +433,9 @@ public class MetricDetailFragment extends Fragment {
             return 0;
         }
         if ("temperature".equals(metricType)) {
-            if (val > 37.0f || (val < 30.0f && val > 0)) return 2; // Critical (Đỏ)
-            if ((val >= 30.0f && val < 31.0f) || (val > 35.0f && val <= 37.0f)) return 1; // Warning (Vàng)
-            return 0; // Normal (Xanh)
+            if (val > 37.0f || (val < 30.0f && val > 0)) return 2; 
+            if ((val >= 30.0f && val < 31.0f) || (val > 35.0f && val <= 37.0f)) return 1; 
+            return 0; 
         }
         if ("dust".equals(metricType)) {
             if (val > 50) return 1;
@@ -501,18 +630,17 @@ public class MetricDetailFragment extends Fragment {
         if (data == null || binding == null) return;
         
         String unit = getUnit();
-        boolean isMeasurementBased = "heart_rate".equals(metricType) || "spo2".equals(metricType);
+        String rawTrangThai = String.valueOf(data.getOrDefault("TrangThai", ""));
         
-        if (isMeasurementBased) {
-            Object lastTime = data.get("LastMeasureTime");
-            String timeStr = String.valueOf(lastTime);
-            if (lastTime == null || timeStr.equalsIgnoreCase("Chua do") || timeStr.trim().isEmpty() || timeStr.equals("null")) {
-                binding.tvCurrentValue.setText("Chưa đo");
-                binding.tvStatCurrent.setText("Chưa đo");
-                binding.tvMetricStatusDetail.setText("Chưa có dữ liệu đo mới nhất");
-                binding.tvLastUpdated.setText("Cập nhật lúc: Chưa đo");
-                return;
-            }
+        // KIỂM TRA TRẠNG THÁI NGOẠI TUYẾN ĐẦU TIÊN
+        if (rawTrangThai.contains("NGOAI TUYEN") || rawTrangThai.contains("OFFLINE")) {
+            binding.tvMetricStatusDetail.setText("Trạng thái: Thiết bị ngoại tuyến");
+            binding.tvMetricStatusDetail.setTextColor(Color.GRAY);
+            binding.tvCurrentValue.setText("-- " + unit);
+            binding.tvCurrentValue.setTextColor(Color.GRAY);
+            binding.tvLastUpdated.setText("Thiết bị mất kết nối");
+            this.currentValue = -1f;
+            return;
         }
 
         String[] nodes = getFirebaseNodes();
@@ -536,7 +664,9 @@ public class MetricDetailFragment extends Fragment {
                 String currentTime = String.valueOf(timeObj);
                 binding.tvLastUpdated.setText("Cập nhật lúc: " + currentTime);
 
-                if (value > 0) {
+                // Dust và Temperature: giá trị 0 là hợp lệ. BPM/SpO2: giá trị 0 nghĩa là chưa đo.
+                boolean shouldAddToChart = ("dust".equals(metricType) || "temperature".equals(metricType)) ? value >= 0 : value > 0;
+                if (shouldAddToChart) {
                     realtimeWaveformEntries.add(new Entry(graphXIndex++, value));
                     if (realtimeWaveformEntries.size() > 30) realtimeWaveformEntries.remove(0);
                     dashboardViewModel.updateHistoryCache(metricType + "_wave", realtimeWaveformEntries);
@@ -544,9 +674,12 @@ public class MetricDetailFragment extends Fragment {
                 }
             } catch (Exception e) {}
         }
+        
+        this.currentValue = value; 
     }
 
     private void updateDetailStatusMessage(float value) {
+        if (value < 0) return;
         String status;
         int color = Color.parseColor("#4CAF50");
 
@@ -589,13 +722,9 @@ public class MetricDetailFragment extends Fragment {
         }
     }
 
-    // ============================================
-    // LOGIC TÍCH HỢP GEMINI API VÀO 4 BUỔI
-    // ============================================
     private void checkAndGenerateAIAdvice() {
         if (validDataCount == 0 || binding == null) return;
         
-        // SỬ DỤNG API KEY TỪ BUILDCONFIG (BẢO MẬT)
         String apiKey = BuildConfig.GEMINI_API_KEY;
         if (apiKey == null || apiKey.isEmpty() || apiKey.contains("YOUR_API_KEY")) {
             binding.tvAdvice.setText("Để xem lời khuyên AI, vui lòng cập nhật GEMINI_API_KEY trong file local.properties.");
@@ -621,31 +750,43 @@ public class MetricDetailFragment extends Fragment {
         String savedDate = prefs.getString(cacheKey + "_date", "");
         String cachedResult = prefs.getString(cacheKey, "");
 
-        // KIỂM TRA THÔNG MINH: Nếu đúng Ngày + đúng Khung giờ + đã có dữ liệu (không phải lỗi) -> Dùng lại cache
         if (savedSession.equals(session) && savedDate.equals(today) && !cachedResult.isEmpty() && !cachedResult.startsWith("Lỗi")) {
-            binding.tvAdvice.setText(cachedResult);
+            displayFormattedAdvice(cachedResult);
             binding.tvAdviceTime.setText("Phân tích " + session + " (" + today + ")");
             return;
         }
 
-        // Tạo Prompt
         float avg = totalSum / validDataCount;
         String unit = getUnit();
         String format = "temperature".equals(metricType) ? "%.1f" : "%.0f";
         
         String prompt = "Dữ liệu " + displayTitle + " của tôi:\n" +
-                "- Hiện tại: " + String.format(format, avg) + unit + "\n" + 
+                "- Giá trị hiện tại (vừa đo): " + (currentValue > 0 ? String.format(format, currentValue) : "Chưa có dữ liệu mới") + unit + "\n" + 
+                "- Trung bình 7 ngày qua: " + String.format(format, avg) + unit + "\n" + 
                 "- Cao nhất (7 ngày): " + String.format(format, highestValue) + unit + "\n" +
                 "- Thấp nhất (7 ngày): " + String.format(format, lowestValue) + unit + "\n" +
-                "Dựa trên các quy tắc chuyên môn, hãy đưa ra phân tích và lời khuyên ngắn gọn.";
+                "Hãy so sánh giá trị Hiện Tại với Trung Bình và đưa ra lời khuyên ngắn gọn.";
 
         binding.tvAdvice.setText("AI đang phân tích...");
         binding.tvAdviceTime.setText("Khung giờ đang lấy: " + session);
 
-        // Hủy task cũ nếu có trước khi chạy task mới
         if (currentAiTask != null) currentAiTask.cancel(true);
         currentAiTask = new GenerateAdviceTask(session, today, cacheKey, cacheSessionKey, apiKey);
         currentAiTask.execute(prompt);
+    }
+
+    private void displayFormattedAdvice(String rawResult) {
+        if (binding == null) return;
+        String formattedResult = rawResult != null ? rawResult
+                .replaceAll("\\*\\*(.*?)\\*\\*", "<b>$1</b>")
+                .replaceAll("\\*(.*?)\\*", "<i>$1</i>")
+                .replace("\n", "<br/>") : "";
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            binding.tvAdvice.setText(Html.fromHtml(formattedResult, Html.FROM_HTML_MODE_COMPACT));
+        } else {
+            binding.tvAdvice.setText(Html.fromHtml(formattedResult));
+        }
     }
 
     private class GenerateAdviceTask extends android.os.AsyncTask<String, Void, String> {
@@ -671,7 +812,6 @@ public class MetricDetailFragment extends Fragment {
 
                 org.json.JSONObject jsonBody = new org.json.JSONObject();
                 
-                // THÊM CHỈ DẪN HỆ THỐNG (SYSTEM INSTRUCTION) THEO YÊU CẦU NGƯỜI DÙNG
                 org.json.JSONObject systemInstruction = new org.json.JSONObject();
                 org.json.JSONArray siParts = new org.json.JSONArray();
                 org.json.JSONObject siPart = new org.json.JSONObject();
@@ -725,13 +865,11 @@ public class MetricDetailFragment extends Fragment {
 
         @Override
         protected void onPostExecute(String result) {
-            // KIỂM TRA AN TOÀN: Nếu Fragment đã bị đóng hoặc Context không còn, thoát ngay để tránh Crash
             if (binding == null || !isAdded() || getContext() == null) return;
 
-            binding.tvAdvice.setText(result);
+            displayFormattedAdvice(result);
             binding.tvAdviceTime.setText("Phân tích lúc: " + session + " (" + today + ")");
             
-            // CHỈ LƯU VÀO CACHE NẾU KHÔNG PHẢI LÀ LỖI
             if (!result.startsWith("Lỗi")) {
                 SharedPreferences prefs = requireContext().getSharedPreferences("AppPrefs", Context.MODE_PRIVATE);
                 prefs.edit()

@@ -55,8 +55,9 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
     
     private boolean isSosAlertActive = false;
     private boolean isFallAlertActive = false;
+    private boolean isHealthAlertActive = false;
 
-    private ObjectAnimator heartbeatAnimator;
+
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -156,8 +157,9 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         boolean isFall = Boolean.TRUE.equals(data.get("Alert_Fall"));
         boolean isSOS = Boolean.TRUE.equals(data.get("Alert_SOS"));
         boolean isHealthAlert = Boolean.TRUE.equals(data.get("Alert_Health"));
+        String alertReason = String.valueOf(data.get("Alert_Reason"));
 
-        handleNotifications(isSOS, isFall);
+        handleNotifications(isSOS, isFall, isHealthAlert, alertReason);
 
         if (isSOS || isFall || isHealthAlert) {
             binding.btnCancelAlert.setVisibility(View.VISIBLE);
@@ -203,35 +205,42 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             // Chỉ hiện các trạng thái thường khi đang trực tuyến - Tránh việc thiết bị tắt mà App vẫn báo "Bình thường"
             if (isHealthAlert || rawTrangThai.contains("CANH BAO")) {
                 trangThaiVn = "CẢNH BÁO SỨC KHỎE!";
-                StringBuilder sb = new StringBuilder("Phát hiện bất thường: ");
-                boolean added = false;
-                try {
-                    if (hr != null) {
-                        float v = Float.parseFloat(String.valueOf(hr));
-                        if (v > 100) { sb.append("Nhịp tim cao (").append((int)v).append(")"); added = true; }
-                        else if (v < 60 && v > 0) { sb.append("Nhịp tim thấp (").append((int)v).append(")"); added = true; }
-                    }
-                    if (spo2 != null) {
-                        float v = Float.parseFloat(String.valueOf(spo2));
-                        if (v < 94 && v > 0) {
-                            if (added) sb.append(", ");
-                            sb.append("SpO2 thấp (").append((int)v).append("%)"); added = true;
-                        }
-                    }
-                    if (tempObj != null) {
-                        float v = Float.parseFloat(String.valueOf(tempObj));
-                        if (v > 37.8f) {
-                            if (added) sb.append(", ");
-                            sb.append("Thân nhiệt cao (").append(String.format("%.1f", v)).append("°C)"); added = true;
-                        } else if (v < 35.0f && v > 0) {
-                            if (added) sb.append(", ");
-                            sb.append("Thân nhiệt thấp (").append(String.format("%.1f", v)).append("°C)"); added = true;
-                        }
-                    }
-                } catch (Exception ignored) {}
+                String alertReasonText = String.valueOf(data.get("Alert_Reason"));
                 
-                if (!added) sb.append("Chỉ số vượt ngưỡng an toàn");
-                statusDetail = sb.toString();
+                if (alertReasonText != null && !alertReasonText.isEmpty() && !"null".equalsIgnoreCase(alertReasonText)) {
+                    statusDetail = "Phát hiện bất thường: " + alertReasonText;
+                } else {
+                    StringBuilder sb = new StringBuilder("Phát hiện bất thường: ");
+                    boolean added = false;
+                    try {
+                        if (hr != null) {
+                            float v = Float.parseFloat(String.valueOf(hr));
+                            if (v > 100) { sb.append("Nhịp tim cao (").append((int)v).append(")"); added = true; }
+                            else if (v < 60 && v > 0) { sb.append("Nhịp tim thấp (").append((int)v).append(")"); added = true; }
+                        }
+                        if (spo2 != null) {
+                            float v = Float.parseFloat(String.valueOf(spo2));
+                            if (v < 94 && v > 0) {
+                                if (added) sb.append(", ");
+                                sb.append("SpO2 thấp (").append((int)v).append("%)"); added = true;
+                            }
+                        }
+                        if (tempObj != null) {
+                            float v = Float.parseFloat(String.valueOf(tempObj));
+                            if (v > 37.8f) {
+                                if (added) sb.append(", ");
+                                sb.append("Thân nhiệt cao (").append(String.format("%.1f", v)).append("°C)"); added = true;
+                            } else if (v < 35.0f && v > 0) {
+                                if (added) sb.append(", ");
+                                sb.append("Thân nhiệt thấp (").append(String.format("%.1f", v)).append("°C)"); added = true;
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                    
+                    if (!added) sb.append("Chỉ số vượt ngưỡng an toàn");
+                    statusDetail = sb.toString();
+                }
+                
                 binding.tvHomeOverallStatus.setTextColor(Color.parseColor("#FB8C00"));
                 binding.ivStatusIcon.setImageResource(R.drawable.ic_info_circle_blue);
             } else if (rawTrangThai.contains("BINH THUONG")) {
@@ -244,24 +253,19 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         
         binding.tvHomeOverallStatus.setText(trangThaiVn);
         binding.tvStatusDetail.setText(statusDetail);
-        
-        if ("ĐANG KẾT NỐI...".equals(trangThaiVn)) {
-            binding.tvStatusDetail.setVisibility(View.GONE);
-        } else {
-            binding.tvStatusDetail.setVisibility(View.VISIBLE);
-        }
+        binding.tvStatusDetail.setVisibility(View.VISIBLE);
 
         String trangThaiDoVn = "--";
-        if ("Cho do".equalsIgnoreCase(rawTrangThaiDo)) trangThaiDoVn = "Chờ đo";
-        else if ("Dang do".equalsIgnoreCase(rawTrangThaiDo)) trangThaiDoVn = "Đang đo...";
-        else if ("Hoan tat".equalsIgnoreCase(rawTrangThaiDo)) trangThaiDoVn = "Hoàn tất";
-        else if (rawTrangThaiDo != null && !"null".equals(rawTrangThaiDo)) trangThaiDoVn = rawTrangThaiDo;
-        
-        if ("Dang do".equalsIgnoreCase(rawTrangThaiDo) || "Do lien tuc".equalsIgnoreCase(rawTrangThaiDo)) {
-            startHeartbeatAnimation();
-        } else {
-            stopHeartbeatAnimation();
+        if (rawTrangThaiDo != null && !"null".equalsIgnoreCase(String.valueOf(rawTrangThaiDo))) {
+            String s = String.valueOf(rawTrangThaiDo).trim().toLowerCase();
+            if (s.contains("cho do")) trangThaiDoVn = "Chờ đo";
+            else if (s.contains("dang do")) trangThaiDoVn = "Đang đo...";
+            else if (s.contains("hoan tat")) trangThaiDoVn = "Hoàn tất";
+            else if (s.contains("do lien tuc")) trangThaiDoVn = "Đo liên tục";
+            else trangThaiDoVn = String.valueOf(rawTrangThaiDo);
         }
+        
+
 
         binding.tvHomeHeartRate.setText((hr != null ? hr : "--") + " bpm");
         binding.tvTimeHr.setText("Đo lúc: " + lastMeasureVn);
@@ -271,12 +275,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         binding.tvTimeSpo2.setText("Đo lúc: " + lastMeasureVn);
         binding.tvStatusMeasureSpo2.setText("Trạng thái: " + trangThaiDoVn);
         
-        if (spo2 != null) {
-            try {
-                int spo2Val = (int) Float.parseFloat(String.valueOf(spo2));
-                binding.progressHomeSpo2.setProgress(spo2Val);
-            } catch (Exception ignored) {}
-        }
+
 
         binding.tvHomeTemperature.setText((tempObj != null ? formatTemp(tempObj) : "--") + " °C");
         binding.tvHomeTempAmb.setText("Môi trường: " + (tempAmb != null ? formatTemp(tempAmb) : "--") + " °C");
@@ -303,7 +302,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    private void handleNotifications(boolean isSOS, boolean isFall) {
+    private void handleNotifications(boolean isSOS, boolean isFall, boolean isHealthAlert, String alertReason) {
         if (isSOS) {
             if (!isSosAlertActive) {
                 NotificationHelper.showError(getView(), "CẢNH BÁO: Thiết bị vừa nhấn nút SOS khẩn cấp!");
@@ -321,28 +320,19 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
         } else {
             isFallAlertActive = false;
         }
-    }
 
-    private void startHeartbeatAnimation() {
-        if (heartbeatAnimator == null) {
-            PropertyValuesHolder scaleX = PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.05f, 1f);
-            PropertyValuesHolder scaleY = PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.05f, 1f);
-            heartbeatAnimator = ObjectAnimator.ofPropertyValuesHolder(binding.cardHeartRate, scaleX, scaleY);
-            heartbeatAnimator.setDuration(800);
-            heartbeatAnimator.setRepeatCount(ValueAnimator.INFINITE);
-            heartbeatAnimator.start();
-        } else if (!heartbeatAnimator.isRunning()) {
-            heartbeatAnimator.start();
+        if (isHealthAlert) {
+            if (!isHealthAlertActive) {
+                String msg = (alertReason != null && !alertReason.isEmpty() && !"null".equalsIgnoreCase(alertReason)) ? alertReason : "Phát hiện chỉ số bất thường!";
+                NotificationHelper.showError(getView(), "BÁO ĐỘNG SỨC KHỎE: " + msg);
+                isHealthAlertActive = true;
+            }
+        } else {
+            isHealthAlertActive = false;
         }
     }
 
-    private void stopHeartbeatAnimation() {
-        if (heartbeatAnimator != null && heartbeatAnimator.isRunning()) {
-            heartbeatAnimator.cancel();
-            binding.cardHeartRate.setScaleX(1f);
-            binding.cardHeartRate.setScaleY(1f);
-        }
-    }
+
 
     private String formatTemp(Object temp) {
         try {
