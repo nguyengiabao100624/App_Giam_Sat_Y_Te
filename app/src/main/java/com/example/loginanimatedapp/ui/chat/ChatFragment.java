@@ -41,7 +41,6 @@ import com.example.loginanimatedapp.model.ChatMessage;
 import com.example.loginanimatedapp.ui.dashboard.DashboardViewModel;
 
 import com.google.ai.client.generativeai.GenerativeModel;
-import com.google.ai.client.generativeai.java.ChatFutures;
 import com.google.ai.client.generativeai.java.GenerativeModelFutures;
 import com.google.ai.client.generativeai.type.Content;
 import com.google.ai.client.generativeai.type.GenerateContentResponse;
@@ -71,6 +70,7 @@ public class ChatFragment extends Fragment {
     private DashboardViewModel sharedViewModel;
     private ChatViewModel chatViewModel;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    
     private Uri selectedFileUri = null;
     private Bitmap cameraBitmap = null;
 
@@ -87,28 +87,37 @@ public class ChatFragment extends Fragment {
     
     private final List<String> historyDataList = new ArrayList<>();
 
-    private final ActivityResultLauncher<String> requestPermissionLauncher =
+    // QUYỀN CAMERA
+    private final ActivityResultLauncher<String> requestCameraPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) openCameraIntent();
+                else Toast.makeText(getContext(), "Cần quyền Camera để chụp ảnh", Toast.LENGTH_SHORT).show();
+            });
+
+    private final ActivityResultLauncher<String> requestMicPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) startVoiceRecording();
                 else Toast.makeText(getContext(), "Cần quyền Micro để thu âm", Toast.LENGTH_SHORT).show();
             });
 
-    private final ActivityResultLauncher<String> pickFileLauncher =
+    private final ActivityResultLauncher<String> pickImageLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
-                    clearCameraData();
                     selectedFileUri = uri;
-                    showAttachmentPreview(uri);
+                    cameraBitmap = null; // Ưu tiên Uri từ Gallery
+                    binding.cvAttachmentPreview.setVisibility(View.VISIBLE);
+                    binding.ivPreview.setImageURI(uri);
+                    updateSendButtonVisibility();
                 }
             });
 
     private final ActivityResultLauncher<Intent> cameraLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                    clearAttachmentData();
                     Bitmap photo = (Bitmap) result.getData().getExtras().get("data");
                     if (photo != null) {
                         cameraBitmap = photo;
+                        selectedFileUri = null; // Ưu tiên Bitmap từ Camera
                         binding.cvAttachmentPreview.setVisibility(View.VISIBLE);
                         binding.ivPreview.setImageBitmap(photo);
                         updateSendButtonVisibility();
@@ -116,13 +125,13 @@ public class ChatFragment extends Fragment {
                 }
             });
 
-    private final ActivityResultLauncher<String[]> pickDocumentLauncher =
+    private final ActivityResultLauncher<String[]> pickFileLauncher =
             registerForActivityResult(new ActivityResultContracts.OpenDocument(), uri -> {
                 if (uri != null) {
-                    clearCameraData();
                     selectedFileUri = uri;
+                    cameraBitmap = null;
                     binding.cvAttachmentPreview.setVisibility(View.VISIBLE);
-                    binding.ivPreview.setImageResource(android.R.drawable.ic_menu_save);
+                    binding.ivPreview.setImageResource(R.drawable.ic_pdf); // Mặc định icon PDF
                     updateSendButtonVisibility();
                 }
             });
@@ -166,9 +175,12 @@ public class ChatFragment extends Fragment {
             else showAttachmentMenu();
         });
 
-        binding.btnMenuGallery.setOnClickListener(v -> { hideAttachmentMenu(); pickFileLauncher.launch("image/*"); });
-        binding.btnMenuFiles.setOnClickListener(v -> { hideAttachmentMenu(); pickDocumentLauncher.launch(new String[]{"*/*"}); });
-        binding.btnMenuCamera.setOnClickListener(v -> { hideAttachmentMenu(); Intent it = new Intent(MediaStore.ACTION_IMAGE_CAPTURE); cameraLauncher.launch(it); });
+        binding.btnMenuGallery.setOnClickListener(v -> { hideAttachmentMenu(); pickImageLauncher.launch("image/*"); });
+        binding.btnMenuFiles.setOnClickListener(v -> { hideAttachmentMenu(); pickFileLauncher.launch(new String[]{"*/*"}); });
+        binding.btnMenuCamera.setOnClickListener(v -> { 
+            hideAttachmentMenu(); 
+            checkCameraPermission();
+        });
 
         binding.btnMic.setOnClickListener(v -> checkVoicePermission());
         binding.btnStopRecording.setOnClickListener(v -> stopVoiceRecording(false));
@@ -177,12 +189,25 @@ public class ChatFragment extends Fragment {
         binding.btnRemoveAttachment.setOnClickListener(v -> clearAllAttachments());
         binding.btnSend.setOnClickListener(v -> sendMessage());
 
-        binding.btnSuggestHealth.setOnClickListener(v -> fastSend("Kiểm tra sức khỏe hiện tại của tôi dựa trên dữ liệu cảm biến."));
-        binding.btnSuggestHeart.setOnClickListener(v -> fastSend("Giải thích các chỉ số nhịp tim của tôi có ý nghĩa gì?"));
-        binding.btnSuggestSpo2.setOnClickListener(v -> fastSend("Nồng độ Oxy SpO2 của tôi hiện tại thế nào? Nó có ổn không?"));
-        binding.btnSuggestEmergency.setOnClickListener(v -> fastSend("Tôi nên làm gì trong các tình huống khẩn cấp về sức khỏe?"));
+        binding.btnSuggestHealth.setOnClickListener(v -> fastSend("Kiểm tra sức khỏe hiện tại của tôi."));
+        binding.btnSuggestHeart.setOnClickListener(v -> fastSend("Nhịp tim của tôi có ổn không?"));
+        binding.btnSuggestSpo2.setOnClickListener(v -> fastSend("SpO2 của tôi đang thế nào?"));
+        binding.btnSuggestEmergency.setOnClickListener(v -> fastSend("Cảnh báo khẩn cấp!"));
         
         binding.etMessageInput.setOnClickListener(v -> hideAttachmentMenu());
+    }
+
+    private void checkCameraPermission() {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            openCameraIntent();
+        } else {
+            requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA);
+        }
+    }
+
+    private void openCameraIntent() {
+        Intent it = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        cameraLauncher.launch(it);
     }
 
     private void loadHistoryForAI() {
@@ -284,7 +309,7 @@ public class ChatFragment extends Fragment {
 
     private void checkVoicePermission() {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startVoiceRecording();
-        else requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+        else requestMicPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
     }
 
     private void startVoiceRecording() {
@@ -321,12 +346,6 @@ public class ChatFragment extends Fragment {
         if (binding == null) return;
         binding.cvAttachmentMenu.setVisibility(View.GONE);
         binding.btnAttach.setBackground(null);
-    }
-
-    private void showAttachmentPreview(Uri uri) {
-        binding.cvAttachmentPreview.setVisibility(View.VISIBLE);
-        binding.ivPreview.setImageURI(uri);
-        updateSendButtonVisibility();
     }
 
     private void setupUI() {
@@ -377,10 +396,9 @@ public class ChatFragment extends Fragment {
         sendMessage();
     }
 
-    private void clearAttachmentData() { selectedFileUri = null; }
-    private void clearCameraData() { cameraBitmap = null; }
     private void clearAllAttachments() {
-        clearAttachmentData(); clearCameraData();
+        selectedFileUri = null;
+        cameraBitmap = null;
         if (binding != null) {
             binding.cvAttachmentPreview.setVisibility(View.GONE);
             updateSendButtonVisibility();
@@ -415,7 +433,7 @@ public class ChatFragment extends Fragment {
                     "   - Bình thường: **95-100%** (Chỉ số lý tưởng). Cảnh báo: **<94%** (Cần theo dõi thêm, hít thở sâu). Nguy hiểm: **<90%** (Hypoxia).\n" +
                     "   - **QUY TẮC SENSOR**: Nếu SpO2 = 0, nhắc người dùng kiểm tra vị trí cảm biến trên da.\n\n" +
                     "3. 🌡️ NHIỆT ĐỘ (PHÂN BIỆT ĐỐI TƯỢNG):\n" +
-                    "   - **🌡️ THÂN NHIỆT (TempObj)**: Đây là nhiệt độ đo từ cảm biến bề mặt da. Mức **31°C - 35°C LÀ BÌNH THƯỜNG**. Chỉ báo Sốt nếu **> 37.5°C**. **<30°C** là lành, ngoài vùng trên là nhắc nhở cảnh báo nhẹ.\n" +
+                    "   - **🌡️ THÂN NHIỆT (TempObj)**: Đây là nhiệt độ đo từ cảm biến bề mặt da. Mức **31°C - 35°C LÀ BÌNH THƯỜNG**. Chỉ báo Sốt nếu **> 37.5°C**. **<30°C** là lạnh, ngoài vùng trên là nhắc nhở cảnh báo nhẹ.\n" +
                     "   - **🏠 NHIỆT ĐỘ MÔI TRƯỜNG (TempAmb)**: Nếu chênh lệch quá cao với thân nhiệt, hãy khuyên điều chỉnh trang phục.\n\n" +
                     "4. 💨 CHẤT LƯỢNG KHÔNG KHÍ (PM2.5):\n" +
                     "   - An toàn: **<50 µg/m³**. Trung bình (50-100): Người nhạy cảm nên cẩn thận.\n" +
@@ -457,54 +475,39 @@ public class ChatFragment extends Fragment {
         String text = binding.etMessageInput.getText().toString().trim();
         if (text.isEmpty() && selectedFileUri == null && cameraBitmap == null) return;
 
+        // ƯU TIÊN BITMAP ĐỂ HIỂN THỊ VÀ GỬI AI
+        Bitmap currentImage = null;
+        if (cameraBitmap != null) {
+            currentImage = cameraBitmap;
+        } else if (selectedFileUri != null) {
+            try {
+                InputStream is = requireContext().getContentResolver().openInputStream(selectedFileUri);
+                currentImage = BitmapFactory.decodeStream(is);
+            } catch (Exception e) { Log.e(TAG, "Decode error: " + e.getMessage()); }
+        }
+
+        // Tạo tin nhắn người dùng hiển thị lên RecyclerView
         ChatMessage userMessage = new ChatMessage(text, true);
-        if (selectedFileUri != null) userMessage.setImageUri(selectedFileUri.toString());
-        if (cameraBitmap != null) userMessage.setImageBitmap(cameraBitmap);
+        if (currentImage != null) userMessage.setImageBitmap(currentImage);
         
         chatViewModel.addMessage(userMessage);
         binding.etMessageInput.setText("");
         clearAllAttachments();
 
+        // Hiển thị trạng thái bot đang suy nghĩ
         ChatMessage typingMessage = new ChatMessage("", false);
         typingMessage.setTyping(true);
         chatViewModel.addMessage(typingMessage);
 
+        // Ngữ cảnh IOT
         Map<String, Object> data = sharedViewModel.getDeviceData().getValue();
-        
-        Object bpmVal = data != null ? (data.containsKey("BPM") ? data.get("BPM") : data.get("heart_rate")) : 0;
-        Object spo2Val = data != null ? (data.containsKey("SpO2") ? data.get("SpO2") : data.get("spo2")) : 0;
-        Object tempObjVal = data != null ? (data.containsKey("TempObj") ? data.get("TempObj") : data.get("temperature")) : 0;
-        Object tempAmbVal = data != null ? data.get("TempAmb") : "N/A";
-        Object dustVal = data != null ? (data.containsKey("Dust") ? data.get("Dust") : data.get("dust")) : 0;
-        Object timeVal = data != null ? (data.containsKey("LastMeasureTime") ? data.get("LastMeasureTime") : data.get("ThoiGian")) : "Chưa có dữ liệu";
-
-        StringBuilder historyStr = new StringBuilder("\n[HISTORY - DỮ LIỆU LỊCH SỬ 50 LẦN ĐO GẦN NHẤT]:\n");
-        for (String h : historyDataList) historyStr.append(h).append("\n");
-
-        String invisibleContext = String.format(" - {Dữ liệu hiện tại: Nhịp tim %s BPM, SpO2 %s%%, Thân nhiệt (TempObj) %s°C, Nhiệt độ môi trường (TempAmb) %s°C, Bụi mịn PM2.5 %s µg/m³, Thời gian đo: %s}%s",
-                bpmVal != null ? bpmVal.toString() : "0",
-                spo2Val != null ? spo2Val.toString() : "0",
-                tempObjVal != null ? tempObjVal.toString() : "0",
-                tempAmbVal != null ? tempAmbVal.toString() : "N/A",
-                dustVal != null ? dustVal.toString() : "0",
-                timeVal != null ? timeVal.toString() : "N/A",
-                historyStr.toString());
-        
-        String fullPrompt = "{Tin nhắn người dùng: " + text + "}" + invisibleContext;
+        String iContext = data != null ? data.toString() : "N/A";
+        String prompt = text + " [Dữ liệu IOT: " + iContext + "]";
 
         Content.Builder userContentBuilder = new Content.Builder();
         userContentBuilder.setRole("user");
-        userContentBuilder.addText(fullPrompt);
-
-        if (selectedFileUri != null) {
-            try {
-                InputStream is = requireContext().getContentResolver().openInputStream(selectedFileUri);
-                Bitmap bitmap = BitmapFactory.decodeStream(is);
-                userContentBuilder.addImage(bitmap);
-            } catch (Exception e) { Log.e(TAG, "File error: " + e.getMessage()); }
-        } else if (cameraBitmap != null) {
-            userContentBuilder.addImage(cameraBitmap);
-        }
+        userContentBuilder.addText(prompt);
+        if (currentImage != null) userContentBuilder.addImage(currentImage);
 
         ListenableFuture<GenerateContentResponse> response = chatViewModel.getChatFutures().sendMessage(userContentBuilder.build());
         Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
@@ -512,8 +515,7 @@ public class ChatFragment extends Fragment {
             public void onSuccess(GenerateContentResponse result) {
                 mainHandler.post(() -> {
                     chatViewModel.removeLastMessage();
-                    String botResponse = result.getText();
-                    chatViewModel.addMessage(new ChatMessage(botResponse, false));
+                    chatViewModel.addMessage(new ChatMessage(result.getText(), false));
                 });
             }
 
