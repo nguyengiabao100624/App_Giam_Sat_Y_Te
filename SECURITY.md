@@ -1,21 +1,56 @@
-# Security Policy
+# Security Policy / Chính sách bảo mật
 
-## Supported Versions
+## 🔐 Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+| Version | Supported |
+|---------|-----------|
+| 1.0.x   | ✅ Active support |
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+## 🛡️ Security Measures / Biện pháp bảo mật
 
-## Reporting a Vulnerability
+### API Key Protection
 
-Use this section to tell people how to report a vulnerability.
+This project uses sensitive API keys that are **never committed to the repository**:
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+| Key | Storage Method | Purpose |
+|-----|---------------|---------|
+| `MAPS_API_KEY` | `local.properties` (gitignored) | Google Maps SDK |
+| `GEMINI_API_KEY` | `local.properties` (gitignored) | Google Gemini AI |
+| `google-services.json` | `app/` directory (gitignored) | Firebase configuration |
+
+All API keys are injected at build time via `BuildConfig` fields and `manifestPlaceholders`, ensuring they never appear in source code.
+
+### Firebase Security
+
+- **Authentication:** Email/Password + Phone OTP verification
+- **Database Rules:** Read/write access restricted to authenticated users
+- **Storage Rules:** User-specific access control for profile images
+
+### Data Privacy
+
+- Health data is transmitted over **HTTPS/TLS** (Firebase default)
+- Sensor readings are associated with device IDs, not directly with personal information
+- Users can delete their notification history from the app
+- Phone numbers and emails can be hidden via privacy toggles
+
+## 🚨 Reporting a Vulnerability
+
+If you discover a security vulnerability, please report it responsibly:
+
+1. **DO NOT** create a public GitHub issue
+2. **Email:** Contact the maintainer directly via GitHub profile
+3. **Include:**
+   - Description of the vulnerability
+   - Steps to reproduce
+   - Potential impact assessment
+4. **Response time:** We aim to respond within **48 hours**
+
+## ⚠️ Known Limitations
+
+- `local.properties` must be manually created by each developer (not version-controlled)
+- Firebase Realtime Database rules should be reviewed and tightened for production use
+- The app currently uses `isMinifyEnabled = false` — ProGuard should be enabled for production releases
+
+---
+
+*Last updated: May 2026*
