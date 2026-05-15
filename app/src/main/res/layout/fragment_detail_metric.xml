@@ -109,18 +109,20 @@
                         android:gravity="center"
                         android:padding="8dp">
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Cao nhất"
                             android:textSize="12sp"
+                            android:gravity="center"
                             android:textColor="@color/app_gray"/>
                         <TextView
                             android:id="@+id/tv_stat_highest"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="--"
                             android:textSize="18sp"
                             android:textStyle="bold"
+                            android:gravity="center"
                             android:textColor="@color/color_status_danger"/>
                     </LinearLayout>
 
@@ -133,18 +135,20 @@
                         android:gravity="center"
                         android:padding="8dp">
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Thấp nhất"
                             android:textSize="12sp"
+                            android:gravity="center"
                             android:textColor="@color/app_gray"/>
                         <TextView
                             android:id="@+id/tv_stat_lowest"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="--"
                             android:textSize="18sp"
                             android:textStyle="bold"
+                            android:gravity="center"
                             android:textColor="@color/color_status_normal"/>
                     </LinearLayout>
 
@@ -157,18 +161,20 @@
                         android:gravity="center"
                         android:padding="8dp">
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Trung bình"
                             android:textSize="12sp"
+                            android:gravity="center"
                             android:textColor="@color/app_gray"/>
                         <TextView
                             android:id="@+id/tv_stat_average"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="--"
                             android:textSize="18sp"
                             android:textStyle="bold"
+                            android:gravity="center"
                             android:textColor="@color/purple_500"/>
                     </LinearLayout>
 
@@ -181,18 +187,20 @@
                         android:gravity="center"
                         android:padding="8dp">
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Hiện tại"
                             android:textSize="12sp"
+                            android:gravity="center"
                             android:textColor="@color/app_gray"/>
                         <TextView
                             android:id="@+id/tv_stat_current"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="--"
                             android:textSize="18sp"
                             android:textStyle="bold"
+                            android:gravity="center"
                             android:textColor="@color/orange_main"/>
                     </LinearLayout>
                 </GridLayout>
@@ -243,6 +251,63 @@
                     android:padding="8dp"/>
             </androidx.cardview.widget.CardView>
 
+            <!-- AI Advice Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Lời khuyên sức khỏe (AI)"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp"/>
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="#E3F2FD">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    
+                    <TextView
+                        android:id="@+id/tv_advice"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Đang phân tích dữ liệu 7 ngày qua..."
+                        android:textColor="#0D47A1"
+                        android:lineSpacingExtra="4dp"
+                        android:textSize="15sp"/>
+                        
+                    <TextView
+                        android:id="@+id/tv_advice_time"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Khung giờ phân tích: --"
+                        android:textColor="#1976D2"
+                        android:textSize="12sp"
+                        android:layout_marginTop="8dp"
+                        android:textStyle="italic"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Export PDF Button -->
+            <Button
+                android:id="@+id/btn_export_pdf"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="32dp"
+                android:text="XUẤT BÁO CÁO PDF"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:backgroundTint="#FFB300"
+                app:cornerRadius="12dp"
+                android:elevation="4dp"/>
+
             <!-- About Section -->
             <TextView
                 android:layout_width="wrap_content"
@@ -250,7 +315,7 @@
                 android:text="Tìm hiểu thêm"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="24dp"
                 android:layout_marginBottom="8dp"/>
 
             <androidx.cardview.widget.CardView

@@ -5,8 +5,8 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.loginanimatedapp.BuildConfig;
 import com.example.loginanimatedapp.model.Notification;
-import com.example.loginanimatedapp.utils.AppConstants;
 import com.github.mikephil.charting.data.Entry;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -28,7 +28,7 @@ public class DashboardViewModel extends ViewModel {
     // Cache dữ liệu lịch sử để không bị reset khi chuyển màn hình
     private final Map<String, List<Entry>> historyCache = new HashMap<>();
     
-    private final FirebaseDatabase mDatabaseInstance = FirebaseDatabase.getInstance(AppConstants.DATABASE_URL);
+    private final FirebaseDatabase mDatabaseInstance = FirebaseDatabase.getInstance(BuildConfig.DATABASE_URL);
     private final DatabaseReference mDatabase = mDatabaseInstance.getReference();
     private final FirebaseAuth mAuth = FirebaseAuth.getInstance();
     

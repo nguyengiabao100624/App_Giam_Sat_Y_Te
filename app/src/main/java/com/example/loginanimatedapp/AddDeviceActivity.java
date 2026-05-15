@@ -8,7 +8,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.loginanimatedapp.databinding.ActivityAddDeviceBinding;
-import com.example.loginanimatedapp.utils.AppConstants;
+import com.example.loginanimatedapp.BuildConfig;
 import com.google.firebase.database.FirebaseDatabase;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
@@ -16,8 +16,8 @@ import com.journeyapps.barcodescanner.ScanOptions;
 public class AddDeviceActivity extends AppCompatActivity {
 
     private ActivityAddDeviceBinding binding;
-    // Sử dụng AppConstants.DATABASE_URL
-    private final FirebaseDatabase mDatabase = FirebaseDatabase.getInstance(AppConstants.DATABASE_URL);
+    // Sử dụng BuildConfig.DATABASE_URL
+    private final FirebaseDatabase mDatabase = FirebaseDatabase.getInstance(BuildConfig.DATABASE_URL);
 
     private final com.google.firebase.auth.FirebaseAuth mAuth = com.google.firebase.auth.FirebaseAuth.getInstance();
 

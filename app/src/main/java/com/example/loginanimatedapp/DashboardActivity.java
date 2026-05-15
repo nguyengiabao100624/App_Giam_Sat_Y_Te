@@ -97,14 +97,25 @@ public class DashboardActivity extends AppCompatActivity {
                 registerReceiver(updateDeviceReceiver, filter);
             }
 
-            // KHÔI PHỤC KẾT NỐI TỪ LẦN TRƯỚC
-            SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
-            String savedDeviceId = prefs.getString("connected_device_id", "");
-            if (!savedDeviceId.isEmpty()) {
-                Log.d("Dashboard", "Khôi phục kết nối tới thiết bị: " + savedDeviceId);
-                dashboardViewModel.startListeningForDeviceData(savedDeviceId);
+            // ĐỒNG BỘ MÃ THIẾT BỊ THEO TÀI KHOẢN ĐĂNG NHẬP
+            com.google.firebase.auth.FirebaseAuth auth = com.google.firebase.auth.FirebaseAuth.getInstance();
+            if (auth.getCurrentUser() != null) {
+                String uid = auth.getCurrentUser().getUid();
+                com.google.firebase.database.FirebaseDatabase.getInstance(com.example.loginanimatedapp.BuildConfig.DATABASE_URL)
+                        .getReference("Users").child(uid).child("deviceId")
+                        .get().addOnSuccessListener(snapshot -> {
+                            String fbDeviceId = snapshot.getValue(String.class);
+                            if (fbDeviceId != null && !fbDeviceId.isEmpty()) {
+                                SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+                                prefs.edit().putString("connected_device_id", fbDeviceId).apply();
+                                Log.d("Dashboard", "Đã đồng bộ Device ID từ Firebase Account: " + fbDeviceId);
+                                dashboardViewModel.startListeningForDeviceData(fbDeviceId);
+                            } else {
+                                fallbackLocalDevice();
+                            }
+                        }).addOnFailureListener(e -> fallbackLocalDevice());
             } else {
-                Log.d("Dashboard", "Không tìm thấy thiết bị đã kết nối trước đó.");
+                fallbackLocalDevice();
             }
 
             dashboardViewModel.startListeningForNotifications();
@@ -116,6 +127,19 @@ public class DashboardActivity extends AppCompatActivity {
             
         } catch (Exception e) {
             Log.e("Dashboard", "Lỗi onCreate: " + e.getMessage());
+        }
+    }
+
+    private void fallbackLocalDevice() {
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        String savedDeviceId = prefs.getString("connected_device_id", "");
+        if (!savedDeviceId.isEmpty()) {
+            Log.d("Dashboard", "Khôi phục kết nối tới thiết bị Local: " + savedDeviceId);
+            if (dashboardViewModel != null) {
+                dashboardViewModel.startListeningForDeviceData(savedDeviceId);
+            }
+        } else {
+            Log.d("Dashboard", "Không tìm thấy thiết bị đã kết nối trước đó.");
         }
     }
 

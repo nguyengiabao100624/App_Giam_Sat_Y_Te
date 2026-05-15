@@ -21,10 +21,10 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
+import com.example.loginanimatedapp.BuildConfig;
 import com.example.loginanimatedapp.DashboardActivity;
 import com.example.loginanimatedapp.R;
 import com.example.loginanimatedapp.model.Notification;
-import com.example.loginanimatedapp.utils.AppConstants;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -80,7 +80,7 @@ public class NotificationService extends Service {
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         String deviceId = prefs.getString("connected_device_id", "");
         if (deviceId.isEmpty()) return;
-        deviceRef = FirebaseDatabase.getInstance(AppConstants.DATABASE_URL).getReference("Devices").child(deviceId);
+        deviceRef = FirebaseDatabase.getInstance(BuildConfig.DATABASE_URL).getReference("Devices").child(deviceId);
         deviceListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -141,7 +141,7 @@ public class NotificationService extends Service {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return;
 
-        DatabaseReference notifRef = FirebaseDatabase.getInstance(AppConstants.DATABASE_URL).getReference("notifications").child(uid);
+        DatabaseReference notifRef = FirebaseDatabase.getInstance(BuildConfig.DATABASE_URL).getReference("notifications").child(uid);
         String id = notifRef.push().getKey();
         Notification n = new Notification(id, title, content, System.currentTimeMillis(), iconRes, value);
         if (id != null) {
@@ -197,6 +197,10 @@ public class NotificationService extends Service {
         if (lower.contains("oxy") || lower.contains("spo2")) return "Nồng độ Oxy trong máu (SpO2) đang ở mức thấp.";
         if (lower.contains("sot") || (lower.contains("nhiet do") && lower.contains("cao"))) return "Nhiệt độ cơ thể cao, phát hiện dấu hiệu sốt.";
         if (lower.contains("nhiet do") && lower.contains("thap")) return "Nhiệt độ cơ thể đang xuống mức thấp.";
+        if (lower.contains("khong tim thay mach")) return "Báo động: Không tìm thấy mạch đập!";
+        if (lower.contains("mat mach khi do lien tuc")) return "Báo động: Mất mạch khi đang đo liên tục!";
+        if (lower.contains("ngat xiu")) return "Nguy kịch: Ngất xỉu sau ngã!";
+        if (lower.contains("suy ho hap")) return "Báo động: Suy hô hấp do ô nhiễm!";
         
         return raw.replace("Nhiet do", "Nhiệt độ")
                   .replace("nhiet do", "nhiệt độ")
